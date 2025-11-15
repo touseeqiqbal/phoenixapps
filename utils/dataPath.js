@@ -33,8 +33,8 @@ function getDataDir() {
   }
   
   // Also check the resolved local data path - if it contains /var/task, we're in Lambda
-  const localDataDir = path.join(__dirname, "../data");
-  const isLocalPathInLambda = localDataDir.startsWith('/var/task');
+  const checkLocalDataDir = path.join(__dirname, "../data");
+  const isLocalPathInLambda = checkLocalDataDir.startsWith('/var/task');
   
   // If we're in /var/task, we're definitely in a serverless environment
   const isVercel = hasVercelEnv || hasLambdaEnv || isInLambdaPath || isLocalPathInLambda;
@@ -58,7 +58,7 @@ function getDataDir() {
         __dirname: __dirname,
         isInLambdaPath: isInLambdaPath,
         isLocalPathInLambda: isLocalPathInLambda,
-        localDataDir: localDataDir
+        checkLocalDataDir: checkLocalDataDir
       });
       return dataDir;
     } catch (error) {
@@ -75,7 +75,7 @@ function getDataDir() {
     }
   }
   // Local development - use project data directory
-  const localDataDir = path.join(__dirname, "../data");
+  const localDataDir = checkLocalDataDir;
   // Ensure local data directory exists
   try {
     if (!fs.existsSync(localDataDir)) {
