@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../utils/AuthContext'
 import api from '../utils/api'
-import { Plus, FileText, Trash2, ExternalLink } from 'lucide-react'
+import { Plus, FileText, Trash2, ExternalLink, Table, BarChart, Workflow } from 'lucide-react'
 import '../styles/Dashboard.css'
 
 export default function Dashboard() {
@@ -136,7 +136,36 @@ export default function Dashboard() {
                       navigate(`/form/${form.id}/submissions`)
                     }}
                   >
-                    View Submissions
+                    Submissions
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      navigate(`/form/${form.id}/table`)
+                    }}
+                  >
+                    <Table size={14} />
+                    Table
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      navigate(`/form/${form.id}/reports`)
+                    }}
+                  >
+                    <BarChart size={14} />
+                    Reports
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      navigate(`/form/${form.id}/workflows`)
+                    }}
+                  >
+                    Workflows
                   </button>
                 </div>
               </div>

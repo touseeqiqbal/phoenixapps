@@ -74,6 +74,11 @@ body {
   background-color: #059669;
 }
 
+.btn-success:disabled {
+  background-color: #10b981;
+  opacity: 0.8;
+}
+
 .input {
   width: 100%;
   padding: 10px 12px;

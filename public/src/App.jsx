@@ -6,6 +6,9 @@ import Dashboard from './pages/Dashboard'
 import FormBuilder from './pages/FormBuilder'
 import Submissions from './pages/Submissions'
 import PublicForm from './pages/PublicForm'
+import TableView from './pages/TableView'
+import Reports from './pages/Reports'
+import Workflows from './pages/Workflows'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -44,6 +47,30 @@ function AppRoutes() {
         element={
           <PrivateRoute>
             <Submissions />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/form/:id/table"
+        element={
+          <PrivateRoute>
+            <TableView />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/form/:id/reports"
+        element={
+          <PrivateRoute>
+            <Reports />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/form/:id/workflows"
+        element={
+          <PrivateRoute>
+            <Workflows />
           </PrivateRoute>
         }
       />

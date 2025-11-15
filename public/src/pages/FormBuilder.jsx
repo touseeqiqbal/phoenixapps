@@ -5,7 +5,8 @@ import FieldPalette from '../components/FieldPalette'
 import FormCanvas from '../components/FormCanvas'
 import FormPreview from '../components/FormPreview'
 import FormSettings from '../components/FormSettings'
-import { Save, Eye, ArrowLeft } from 'lucide-react'
+import ConditionalLogic from '../components/ConditionalLogic'
+import { Save, Eye, ArrowLeft, Share2, Copy, Check, GitBranch } from 'lucide-react'
 import '../styles/FormBuilder.css'
 
 export default function FormBuilder() {
@@ -16,8 +17,10 @@ export default function FormBuilder() {
   const [selectedField, setSelectedField] = useState(null)
   const [showPreview, setShowPreview] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showConditionalLogic, setShowConditionalLogic] = useState(false)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [shareLinkCopied, setShareLinkCopied] = useState(false)
 
   useEffect(() => {
     fetchForm()
@@ -99,35 +102,138 @@ export default function FormBuilder() {
     setFields(newFields)
   }
 
+  const copyShareLink = () => {
+    if (form?.shareKey) {
+      const link = `${window.location.origin}/share/${form.shareKey}`
+      navigator.clipboard.writeText(link)
+      setShareLinkCopied(true)
+      setTimeout(() => setShareLinkCopied(false), 2000)
+    }
+  }
+
   const getDefaultLabel = (type) => {
     const labels = {
-      text: 'Text Input',
-      email: 'Email',
-      number: 'Number',
-      textarea: 'Text Area',
-      dropdown: 'Dropdown',
-      radio: 'Radio Buttons',
-      checkbox: 'Checkboxes',
-      date: 'Date',
-      file: 'File Upload',
-      rating: 'Rating'
+      // Basic
+      'short-text': 'Short Text',
+      'long-text': 'Long Text',
+      'paragraph': 'Paragraph',
+      'dropdown': 'Dropdown',
+      'single-choice': 'Single Choice',
+      'multiple-choice': 'Multiple Choice',
+      'number': 'Number',
+      'image': 'Image',
+      'file': 'File Upload',
+      'time': 'Time',
+      'captcha': 'Captcha',
+      'spinner': 'Spinner',
+      // Widgets
+      'heading': 'Heading',
+      'full-name': 'Full Name',
+      'email': 'Email',
+      'address': 'Address',
+      'phone': 'Phone',
+      'date-picker': 'Date Picker',
+      'appointment': 'Appointment',
+      'signature': 'Signature',
+      'fill-blank': 'Fill in the Blank',
+      // Payments
+      'product-list': 'Product List',
+      // Survey
+      'input-table': 'Input Table',
+      'star-rating': 'Star Rating',
+      'scale-rating': 'Scale Rating',
+      // Page Elements
+      'divider': 'Divider',
+      'section-collapse': 'Section Collapse',
+      'page-break': 'Page Break',
+      // Legacy
+      text: 'Short Text',
+      textarea: 'Long Text',
+      radio: 'Single Choice',
+      checkbox: 'Multiple Choice',
+      date: 'Date Picker',
+      rating: 'Star Rating'
     }
     return labels[type] || 'Field'
   }
 
   const getDefaultProps = (type) => {
     const props = {}
+    
+    // Number fields
     if (type === 'number') {
       props.min = 0
       props.max = 100
+      props.step = 1
     }
-    if (type === 'rating') {
+    
+    // Rating fields
+    if (type === 'rating' || type === 'star-rating') {
       props.max = 5
     }
+    
+    // Scale rating
+    if (type === 'scale-rating') {
+      props.min = 1
+      props.max = 10
+      props.minLabel = 'Poor'
+      props.maxLabel = 'Excellent'
+    }
+    
+    // File upload
     if (type === 'file') {
       props.accept = '*'
       props.multiple = false
     }
+    
+    // Textarea/Long text
+    if (type === 'long-text' || type === 'textarea') {
+      props.rows = 4
+    }
+    
+    // Short text
+    if (type === 'short-text' || type === 'text') {
+      props.maxLength = 255
+    }
+    
+    // Heading
+    if (type === 'heading') {
+      props.size = '24px'
+      props.color = '#1f2937'
+      props.align = 'left'
+    }
+    
+    // Product list
+    if (type === 'product-list') {
+      props.products = [
+        { id: '1', name: 'Product 1', price: 10.00 },
+        { id: '2', name: 'Product 2', price: 20.00 }
+      ]
+    }
+    
+    // Input table
+    if (type === 'input-table') {
+      props.rows = 3
+      props.columns = 3
+      props.rowHeaders = []
+      props.columnHeaders = []
+    }
+    
+    // Fill in the blank
+    if (type === 'fill-blank') {
+      props.content = 'Fill in the blank: The capital of France is ____'
+    }
+    
+    // Section collapse
+    if (type === 'section-collapse') {
+      props.defaultExpanded = false
+    }
+    
+    // Options for choice fields
+    if (['dropdown', 'single-choice', 'multiple-choice', 'radio', 'checkbox'].includes(type)) {
+      props.options = ['Option 1', 'Option 2']
+    }
+    
     return props
   }
 
@@ -155,12 +261,29 @@ export default function FormBuilder() {
             placeholder="Form Title"
           />
           <div className="builder-actions">
+            {form?.shareKey && (
+              <button 
+                className={`btn ${shareLinkCopied ? 'btn-success' : 'btn-secondary'}`}
+                onClick={copyShareLink}
+                title="Copy share link"
+              >
+                {shareLinkCopied ? <Check size={18} /> : <Share2 size={18} />}
+                {shareLinkCopied ? 'Copied!' : 'Share'}
+              </button>
+            )}
             <button 
               className="btn btn-secondary" 
               onClick={() => setShowPreview(!showPreview)}
             >
               <Eye size={18} />
               Preview
+            </button>
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => setShowConditionalLogic(!showConditionalLogic)}
+            >
+              <GitBranch size={18} />
+              Logic
             </button>
             <button 
               className="btn btn-secondary" 
@@ -197,6 +320,15 @@ export default function FormBuilder() {
           form={form}
           fields={fields}
           onClose={() => setShowPreview(false)}
+        />
+      )}
+
+      {showConditionalLogic && (
+        <ConditionalLogic
+          fields={fields}
+          form={form}
+          onUpdate={(updates) => setForm({ ...form, ...updates })}
+          onClose={() => setShowConditionalLogic(false)}
         />
       )}
 
