@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",
-    "build": "cd public && npm run build",
+    "build": "cd public && npm install && npm run build",
     "install-frontend": "cd public && npm install",
+    "vercel-build": "cd public && npm install && npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

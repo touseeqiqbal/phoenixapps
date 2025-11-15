@@ -33,22 +33,49 @@ app.use("/api/public", publicRouter);
 // Serve static files from public/dist in production, or public in development
 const publicDir = path.join(__dirname, "public");
 const distDir = path.join(publicDir, "dist");
+const fs = require("fs");
 
 // Check if dist directory exists (production build)
-const staticDir = require("fs").existsSync(distDir) ? distDir : publicDir;
-app.use(express.static(staticDir));
+const staticDir = fs.existsSync(distDir) ? distDir : publicDir;
+
+// Serve static assets with caching
+app.use(express.static(staticDir, {
+  maxAge: process.env.NODE_ENV === 'production' ? '1y' : '0',
+  etag: true,
+  lastModified: true
+}));
 
 // Serve index.html for all non-API routes (SPA routing)
-app.use((req, res, next) => {
-  if (req.method === "GET" && !req.path.startsWith("/api")) {
-    const indexPath = require("fs").existsSync(distDir) 
-      ? path.join(distDir, "index.html")
-      : path.join(publicDir, "index.html");
-    return res.sendFile(indexPath);
+app.get("*", (req, res, next) => {
+  // Skip API routes
+  if (req.path.startsWith("/api")) {
+    return next();
   }
-  return next();
+  
+  // Skip static file requests (they should be handled by static middleware)
+  if (req.path.match(/\.(js|css|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|json|map)$/)) {
+    return next();
+  }
+  
+  // Serve index.html for SPA routes
+  const indexPath = fs.existsSync(distDir) 
+    ? path.join(distDir, "index.html")
+    : path.join(publicDir, "index.html");
+  
+  if (fs.existsSync(indexPath)) {
+    return res.sendFile(path.resolve(indexPath));
+  }
+  
+  // Fallback for development
+  return res.status(404).send("File not found");
 });
 
-app.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT}`);
-});
+// Only start server if not in Vercel environment
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, () => {
+    console.log(`Server listening on http://localhost:${PORT}`);
+  });
+}
+
+// Export for Vercel serverless
+module.exports = app;
