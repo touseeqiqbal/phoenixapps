@@ -211,6 +211,57 @@ export default function FieldEditor({ field, onUpdate, onClose }) {
             />
           </div>
         )}
+
+        {field.type === 'logo' && (
+          <>
+            <div className="form-group">
+              <label>Logo Image URL</label>
+              <input
+                type="url"
+                className="input"
+                value={formData.imageUrl || ''}
+                onChange={(e) => updateField('imageUrl', e.target.value)}
+                placeholder="https://example.com/logo.png"
+              />
+              {formData.imageUrl && (
+                <div style={{ marginTop: '10px' }}>
+                  <img 
+                    src={formData.imageUrl} 
+                    alt="Logo preview" 
+                    style={{ maxWidth: '200px', maxHeight: '100px', borderRadius: '6px', border: '1px solid #e5e7eb' }}
+                    onError={(e) => {
+                      e.target.style.display = 'none'
+                      e.target.nextSibling.style.display = 'block'
+                    }}
+                  />
+                  <p style={{ display: 'none', color: '#ef4444', fontSize: '12px' }}>Invalid image URL</p>
+                </div>
+              )}
+            </div>
+            <div className="form-group">
+              <label>Width (px)</label>
+              <input
+                type="number"
+                className="input"
+                value={formData.width || 200}
+                onChange={(e) => updateField('width', parseInt(e.target.value) || 200)}
+                min={50}
+                max={500}
+              />
+            </div>
+            <div className="form-group">
+              <label>Height (px)</label>
+              <input
+                type="number"
+                className="input"
+                value={formData.height || 100}
+                onChange={(e) => updateField('height', parseInt(e.target.value) || 100)}
+                min={50}
+                max={300}
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

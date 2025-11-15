@@ -32,6 +32,7 @@ const FIELD_CATEGORIES = [
     name: 'WIDGETS',
     fields: [
       { type: 'heading', label: 'Heading', icon: Heading },
+      { type: 'logo', label: 'Logo', icon: Image },
       { type: 'full-name', label: 'Full Name', icon: User },
       { type: 'email', label: 'Email', icon: Mail },
       { type: 'address', label: 'Address', icon: MapPin },

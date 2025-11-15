@@ -246,6 +246,28 @@ export default function FieldRenderer({ field, value, onChange, disabled }) {
           </h2>
         )
 
+      case 'logo':
+        return (
+          <div className="logo-wrapper">
+            {field.imageUrl ? (
+              <img 
+                src={field.imageUrl} 
+                alt={field.label || 'Logo'} 
+                className="form-logo"
+                style={{
+                  maxWidth: field.width || '200px',
+                  maxHeight: field.height || '100px',
+                  objectFit: 'contain'
+                }}
+              />
+            ) : (
+              <div className="logo-placeholder">
+                <span>Logo</span>
+              </div>
+            )}
+          </div>
+        )
+
       case 'full-name':
         return (
           <div className="full-name-wrapper">

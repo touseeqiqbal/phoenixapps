@@ -229,6 +229,13 @@ export default function FormBuilder() {
       props.defaultExpanded = false
     }
     
+    // Logo
+    if (type === 'logo') {
+      props.imageUrl = ''
+      props.width = 200
+      props.height = 100
+    }
+    
     // Options for choice fields
     if (['dropdown', 'single-choice', 'multiple-choice', 'radio', 'checkbox'].includes(type)) {
       props.options = ['Option 1', 'Option 2']

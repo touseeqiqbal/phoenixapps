@@ -5,11 +5,28 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  position: relative;
+}
+
+.public-form-page::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.1;
+  z-index: 0;
 }
 
 .public-form-container {
   width: 100%;
   max-width: 700px;
+  position: relative;
+  z-index: 1;
 }
 
 .public-form-card {
@@ -75,4 +92,77 @@
   padding: 40px;
   color: #dc2626;
   font-size: 18px;
+}
+
+.form-logo-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.form-header-logo {
+  max-width: 200px;
+  max-height: 100px;
+  object-fit: contain;
+}
+
+.form-preview-section {
+  margin-top: 30px;
+  padding: 20px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.form-preview-section h3 {
+  margin-bottom: 15px;
+  color: #1f2937;
+}
+
+.preview-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preview-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  background: white;
+  border-radius: 6px;
+}
+
+.preview-item strong {
+  color: #374151;
+  font-size: 14px;
+}
+
+.preview-item span {
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.logo-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.logo-placeholder {
+  width: 200px;
+  height: 100px;
+  border: 2px dashed #d1d5db;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.form-logo {
+  max-width: 100%;
+  height: auto;
 }
