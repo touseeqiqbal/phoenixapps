@@ -86,3 +86,21 @@
   border-radius: 6px;
   font-size: 14px;
 }
+
+.empty-state {
+  text-align: center;
+  padding: 60px 40px;
+  background: white;
+  border-radius: 8px;
+  color: #6b7280;
+}
+
+.empty-state p {
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+.empty-state .hint {
+  color: #9ca3af;
+  font-size: 14px;
+}

@@ -17,16 +17,21 @@ export default function Submissions() {
 
   const fetchData = async () => {
     try {
+      console.log('Fetching submissions for form:', id)
       const [formRes, submissionsRes] = await Promise.all([
         api.get(`/forms/${id}`),
         api.get(`/submissions/form/${id}`)
       ])
+      console.log('Form data:', formRes.data)
+      console.log('Submissions data:', submissionsRes.data)
       setForm(formRes.data)
-      setSubmissions(submissionsRes.data)
+      setSubmissions(submissionsRes.data || [])
     } catch (error) {
       console.error('Failed to fetch data:', error)
-      alert('Failed to load submissions')
-      navigate('/dashboard')
+      console.error('Error response:', error.response?.data)
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to load submissions'
+      alert(`Failed to load submissions: ${errorMessage}`)
+      // Don't navigate away, just show error
     } finally {
       setLoading(false)
     }
@@ -68,7 +73,22 @@ export default function Submissions() {
   }
 
   if (loading) {
-    return <div className="loading">Loading...</div>
+    return <div className="loading">Loading submissions...</div>
+  }
+
+  if (!form) {
+    return (
+      <div className="submissions-page">
+        <div className="container">
+          <div className="empty-state">
+            <p>Form not found</p>
+            <button className="btn btn-secondary" onClick={() => navigate('/dashboard')}>
+              Back to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -80,7 +100,7 @@ export default function Submissions() {
               <ArrowLeft size={18} />
               Back to Form
             </button>
-            <h1>{form?.title} - Submissions</h1>
+            <h1>{form?.title || 'Form'} - Submissions</h1>
             <button className="btn btn-primary" onClick={exportCSV} disabled={submissions.length === 0}>
               <Download size={18} />
               Export CSV
@@ -90,10 +110,36 @@ export default function Submissions() {
       </header>
 
       <div className="container">
-        {submissions.length === 0 ? (
+        {!form ? (
+          <div className="empty-state">
+            <p>Form not found</p>
+          </div>
+        ) : submissions.length === 0 ? (
           <div className="empty-state">
             <p>No submissions yet</p>
             <p className="hint">Share your form to start collecting responses</p>
+            {form.shareKey && (
+              <div style={{ marginTop: '20px' }}>
+                <p style={{ marginBottom: '10px', fontWeight: 600 }}>Share Link:</p>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    readOnly
+                    value={`${window.location.origin}/share/${form.shareKey}`}
+                    style={{ flex: 1, padding: '8px', border: '1px solid #d1d5db', borderRadius: '6px' }}
+                  />
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/share/${form.shareKey}`)
+                      alert('Share link copied!')
+                    }}
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="submissions-list">
@@ -113,16 +159,29 @@ export default function Submissions() {
                   </div>
                 </div>
                 <div className="submission-data">
-                  {form.fields.map(field => (
-                    <div key={field.id} className="submission-field">
-                      <label>{field.label}</label>
-                      <div className="field-value">
-                        {Array.isArray(submission.data[field.id])
-                          ? submission.data[field.id].join(', ')
-                          : submission.data[field.id] || '—'}
-                      </div>
+                  {form.fields && form.fields.length > 0 ? (
+                    form.fields.map(field => {
+                      const value = submission.data?.[field.id]
+                      return (
+                        <div key={field.id} className="submission-field">
+                          <label>{field.label}</label>
+                          <div className="field-value">
+                            {value === undefined || value === null || value === '' 
+                              ? '—'
+                              : Array.isArray(value)
+                              ? value.join(', ')
+                              : typeof value === 'object'
+                              ? JSON.stringify(value)
+                              : String(value)}
+                          </div>
+                        </div>
+                      )
+                    })
+                  ) : (
+                    <div className="submission-field">
+                      <p>No fields in form</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             ))}
