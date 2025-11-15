@@ -5,10 +5,16 @@ const crypto = require("crypto");
 const { getDataFilePath } = require("../utils/dataPath");
 
 const router = express.Router();
-const FORMS_FILE = getDataFilePath("forms.json");
+
+// Lazy file path resolution - resolve at runtime, not module load time
+// This ensures Vercel environment variables are available
+function getFormsFilePath() {
+  return getDataFilePath("forms.json");
+}
 
 // Initialize forms file
 async function initFormsFile() {
+  const FORMS_FILE = getFormsFilePath();
   try {
     await fs.access(FORMS_FILE);
   } catch (error) {
@@ -36,6 +42,7 @@ async function initFormsFile() {
 
 // Get all forms
 async function getForms() {
+  const FORMS_FILE = getFormsFilePath();
   await initFormsFile();
   const data = await fs.readFile(FORMS_FILE, "utf8");
   return JSON.parse(data);
@@ -43,6 +50,7 @@ async function getForms() {
 
 // Save forms
 async function saveForms(forms) {
+  const FORMS_FILE = getFormsFilePath();
   try {
     // Ensure directory exists before writing
     const dir = path.dirname(FORMS_FILE);
@@ -102,6 +110,7 @@ router.get("/:id", async (req, res) => {
 // Create form
 router.post("/", async (req, res) => {
   try {
+    const FORMS_FILE = getFormsFilePath();
     console.log("Create form request received");
     console.log("Request user:", req.user);
     console.log("Request body:", req.body);
@@ -241,22 +250,34 @@ router.delete("/:id", async (req, res) => {
 });
 
 // Team Collaboration Routes
-const MEMBERS_FILE = getDataFilePath("members.json");
-const INVITES_FILE = getDataFilePath("invites.json");
+// Lazy file path resolution for team collaboration files
+function getMembersFilePath() {
+  return getDataFilePath("members.json");
+}
+
+function getInvitesFilePath() {
+  return getDataFilePath("invites.json");
+}
 
 async function initMembersFile() {
+  const MEMBERS_FILE = getMembersFilePath();
   try {
     await fs.access(MEMBERS_FILE);
   } catch {
-    await fs.writeFile(MEMBERS_FILE, JSON.stringify({}, null, 2));
+    const dir = path.dirname(MEMBERS_FILE);
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(MEMBERS_FILE, JSON.stringify({}, null, 2), 'utf8');
   }
 }
 
 async function initInvitesFile() {
+  const INVITES_FILE = getInvitesFilePath();
   try {
     await fs.access(INVITES_FILE);
   } catch {
-    await fs.writeFile(INVITES_FILE, JSON.stringify({}, null, 2));
+    const dir = path.dirname(INVITES_FILE);
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(INVITES_FILE, JSON.stringify({}, null, 2), 'utf8');
   }
 }
 
