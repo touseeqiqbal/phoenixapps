@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../utils/api'
-import { ArrowLeft, Download, Filter, Search } from 'lucide-react'
+import { ArrowLeft, Download, Filter, Search, FileText } from 'lucide-react'
 import '../styles/TableView.css'
 
 export default function TableView() {
@@ -49,10 +49,10 @@ export default function TableView() {
   }
 
   const exportCSV = () => {
-    if (submissions.length === 0) return
+    if (filteredSubmissions.length === 0) return
 
     const headers = ['Submission ID', 'Submitted At', ...form.fields.map(f => f.label)].join(',')
-    const rows = submissions.map(sub => {
+    const rows = filteredSubmissions.map(sub => {
       const rowData = [
         sub.id,
         new Date(sub.submittedAt).toLocaleString(),
@@ -77,6 +77,100 @@ export default function TableView() {
     a.href = url
     a.download = `${form.title}_table.csv`
     a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
+  const exportPDF = async () => {
+    if (filteredSubmissions.length === 0) return
+
+    try {
+      const { jsPDF } = await import('jspdf')
+      const doc = new jsPDF()
+      
+      // Add title
+      doc.setFontSize(18)
+      doc.text(form.title || 'Form Data Table', 14, 20)
+      doc.setFontSize(12)
+      doc.text(`Total Submissions: ${filteredSubmissions.length}`, 14, 30)
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 36)
+      
+      // Table setup
+      const startY = 50
+      const colWidths = [30, 40, ...form.fields.map(() => 20)]
+      const headers = ['ID', 'Date', ...form.fields.map(f => f.label)]
+      
+      let yPosition = startY
+      const pageHeight = doc.internal.pageSize.height
+      const rowHeight = 8
+      const margin = 14
+      
+      // Draw table headers
+      doc.setFontSize(10)
+      doc.setFont(undefined, 'bold')
+      let xPosition = margin
+      headers.forEach((header, idx) => {
+        const text = doc.splitTextToSize(header, colWidths[idx] - 2)
+        doc.text(text, xPosition, yPosition)
+        xPosition += colWidths[idx]
+      })
+      
+      yPosition += rowHeight
+      doc.setLineWidth(0.5)
+      doc.line(margin, yPosition - 2, margin + colWidths.reduce((a, b) => a + b, 0), yPosition - 2)
+      
+      // Draw table rows
+      doc.setFont(undefined, 'normal')
+      doc.setFontSize(8)
+      
+      filteredSubmissions.forEach((submission) => {
+        if (yPosition > pageHeight - 30) {
+          doc.addPage()
+          yPosition = 20
+          // Redraw headers on new page
+          doc.setFont(undefined, 'bold')
+          doc.setFontSize(10)
+          xPosition = margin
+          headers.forEach((header, idx) => {
+            const text = doc.splitTextToSize(header, colWidths[idx] - 2)
+            doc.text(text, xPosition, yPosition)
+            xPosition += colWidths[idx]
+          })
+          yPosition += rowHeight
+          doc.line(margin, yPosition - 2, margin + colWidths.reduce((a, b) => a + b, 0), yPosition - 2)
+          doc.setFont(undefined, 'normal')
+          doc.setFontSize(8)
+        }
+        
+        xPosition = margin
+        const rowData = [
+          submission.id.substring(0, 8),
+          new Date(submission.submittedAt).toLocaleDateString(),
+          ...form.fields.map(field => {
+            const value = submission.data[field.id]
+            if (Array.isArray(value)) {
+              return value.join(', ')
+            }
+            if (typeof value === 'object' && value !== null) {
+              return JSON.stringify(value).substring(0, 15) + '...'
+            }
+            return String(value || '').substring(0, 15)
+          })
+        ]
+        
+        rowData.forEach((cell, idx) => {
+          const text = doc.splitTextToSize(String(cell), colWidths[idx] - 2)
+          doc.text(text, xPosition, yPosition)
+          xPosition += colWidths[idx]
+        })
+        
+        yPosition += rowHeight
+      })
+      
+      doc.save(`${form.title}_table.pdf`)
+    } catch (error) {
+      console.error('Failed to export PDF:', error)
+      alert('Failed to export PDF. Please try again.')
+    }
   }
 
   if (loading) {
@@ -93,10 +187,16 @@ export default function TableView() {
               Back to Form
             </button>
             <h1>{form?.title} - Data Table</h1>
-            <button className="btn btn-primary" onClick={exportCSV} disabled={submissions.length === 0}>
-              <Download size={18} />
-              Export CSV
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="btn btn-secondary" onClick={exportCSV} disabled={filteredSubmissions.length === 0}>
+                <Download size={18} />
+                Export CSV
+              </button>
+              <button className="btn btn-primary" onClick={exportPDF} disabled={filteredSubmissions.length === 0}>
+                <FileText size={18} />
+                Export PDF
+              </button>
+            </div>
           </div>
         </div>
       </header>

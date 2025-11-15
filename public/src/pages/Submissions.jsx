@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../utils/api'
-import { ArrowLeft, Download, Trash2 } from 'lucide-react'
+import { ArrowLeft, Download, Trash2, FileText } from 'lucide-react'
 import '../styles/Submissions.css'
 
 export default function Submissions() {
@@ -52,15 +52,23 @@ export default function Submissions() {
   const exportCSV = () => {
     if (submissions.length === 0) return
 
-    const headers = form.fields.map(f => f.label).join(',')
+    const headers = ['Submission ID', 'Submitted At', ...form.fields.map(f => f.label)].join(',')
     const rows = submissions.map(sub => {
-      return form.fields.map(field => {
-        const value = sub.data[field.id]
-        if (Array.isArray(value)) {
-          return `"${value.join('; ')}"`
-        }
-        return `"${value || ''}"`
-      }).join(',')
+      const rowData = [
+        sub.id,
+        new Date(sub.submittedAt).toLocaleString(),
+        ...form.fields.map(field => {
+          const value = sub.data[field.id]
+          if (Array.isArray(value)) {
+            return `"${value.join('; ')}"`
+          }
+          if (typeof value === 'object' && value !== null) {
+            return `"${JSON.stringify(value)}"`
+          }
+          return `"${value || ''}"`
+        })
+      ]
+      return rowData.join(',')
     })
 
     const csv = [headers, ...rows].join('\n')
@@ -70,6 +78,103 @@ export default function Submissions() {
     a.href = url
     a.download = `${form.title}_submissions.csv`
     a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
+  const exportPDF = async () => {
+    if (submissions.length === 0) return
+
+    try {
+      const { jsPDF } = await import('jspdf')
+      const doc = new jsPDF()
+      
+      // Add title
+      doc.setFontSize(18)
+      doc.text(form.title || 'Form Submissions', 14, 20)
+      doc.setFontSize(12)
+      doc.text(`Total Submissions: ${submissions.length}`, 14, 30)
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 36)
+      
+      let yPosition = 50
+      const pageHeight = doc.internal.pageSize.height
+      const margin = 14
+      const lineHeight = 7
+      
+      submissions.forEach((submission, idx) => {
+        // Check if we need a new page
+        if (yPosition > pageHeight - 40) {
+          doc.addPage()
+          yPosition = 20
+        }
+        
+        // Submission header
+        doc.setFontSize(14)
+        doc.setFont(undefined, 'bold')
+        doc.text(`Submission #${submissions.length - idx}`, margin, yPosition)
+        yPosition += lineHeight + 2
+        
+        doc.setFontSize(10)
+        doc.setFont(undefined, 'normal')
+        doc.text(`Submitted: ${new Date(submission.submittedAt).toLocaleString()}`, margin, yPosition)
+        yPosition += lineHeight + 3
+        
+        // Submission data
+        if (form.fields && form.fields.length > 0) {
+          form.fields.forEach(field => {
+            if (yPosition > pageHeight - 30) {
+              doc.addPage()
+              yPosition = 20
+            }
+            
+            const value = submission.data?.[field.id]
+            let displayValue = '—'
+            
+            if (value !== undefined && value !== null && value !== '') {
+              if (Array.isArray(value)) {
+                displayValue = value.join(', ')
+              } else if (typeof value === 'object') {
+                displayValue = JSON.stringify(value)
+              } else {
+                displayValue = String(value)
+              }
+            }
+            
+            // Split long text into multiple lines
+            const maxWidth = 180
+            const lines = doc.splitTextToSize(`${field.label}: ${displayValue}`, maxWidth)
+            
+            doc.setFont(undefined, 'bold')
+            doc.text(field.label + ':', margin, yPosition)
+            doc.setFont(undefined, 'normal')
+            
+            if (lines.length > 1) {
+              doc.text(lines[0].replace(field.label + ': ', ''), margin + 30, yPosition)
+              yPosition += lineHeight
+              lines.slice(1).forEach(line => {
+                if (yPosition > pageHeight - 20) {
+                  doc.addPage()
+                  yPosition = 20
+                }
+                doc.text(line, margin + 10, yPosition)
+                yPosition += lineHeight
+              })
+            } else {
+              doc.text(displayValue, margin + 30, yPosition)
+              yPosition += lineHeight
+            }
+            
+            yPosition += 2
+          })
+        }
+        
+        yPosition += 5 // Space between submissions
+      })
+      
+      doc.save(`${form.title}_submissions.pdf`)
+    } catch (error) {
+      console.error('Failed to export PDF:', error)
+      alert('Failed to export PDF. Please try again.')
+    }
   }
 
   if (loading) {
@@ -101,10 +206,16 @@ export default function Submissions() {
               Back to Form
             </button>
             <h1>{form?.title || 'Form'} - Submissions</h1>
-            <button className="btn btn-primary" onClick={exportCSV} disabled={submissions.length === 0}>
-              <Download size={18} />
-              Export CSV
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button className="btn btn-secondary" onClick={exportCSV} disabled={submissions.length === 0}>
+                <Download size={18} />
+                Export CSV
+              </button>
+              <button className="btn btn-primary" onClick={exportPDF} disabled={submissions.length === 0}>
+                <FileText size={18} />
+                Export PDF
+              </button>
+            </div>
           </div>
         </div>
       </header>
