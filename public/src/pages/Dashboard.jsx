@@ -1,0 +1,149 @@
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../utils/AuthContext'
+import api from '../utils/api'
+import { Plus, FileText, Trash2, ExternalLink } from 'lucide-react'
+import '../styles/Dashboard.css'
+
+export default function Dashboard() {
+  const [forms, setForms] = useState([])
+  const [loading, setLoading] = useState(true)
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    fetchForms()
+  }, [])
+
+  const fetchForms = async () => {
+    try {
+      const response = await api.get('/forms')
+      setForms(response.data)
+    } catch (error) {
+      console.error('Failed to fetch forms:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const createForm = async () => {
+    try {
+      const response = await api.post('/forms', {
+        title: 'Untitled Form',
+        fields: [],
+        settings: {}
+      })
+      navigate(`/form/${response.data.id}`)
+    } catch (error) {
+      console.error('Failed to create form:', error)
+      alert('Failed to create form')
+    }
+  }
+
+  const deleteForm = async (id, e) => {
+    e.stopPropagation()
+    if (!confirm('Are you sure you want to delete this form?')) return
+
+    try {
+      await api.delete(`/forms/${id}`)
+      setForms(forms.filter(f => f.id !== id))
+    } catch (error) {
+      console.error('Failed to delete form:', error)
+      alert('Failed to delete form')
+    }
+  }
+
+  const copyShareLink = (shareKey, e) => {
+    e.stopPropagation()
+    const link = `${window.location.origin}/share/${shareKey}`
+    navigator.clipboard.writeText(link)
+    alert('Share link copied to clipboard!')
+  }
+
+  if (loading) {
+    return <div className="loading">Loading...</div>
+  }
+
+  return (
+    <div className="dashboard">
+      <header className="dashboard-header">
+        <div className="container">
+          <div className="header-content">
+            <h1>My Forms</h1>
+            <div className="header-actions">
+              <span className="user-name">{user?.name || user?.email}</span>
+              <button className="btn btn-secondary" onClick={logout}>
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="container">
+        <div className="dashboard-actions">
+          <button className="btn btn-primary create-form-btn" onClick={createForm}>
+            <Plus size={20} />
+            Create New Form
+          </button>
+        </div>
+
+        {forms.length === 0 ? (
+          <div className="empty-state">
+            <FileText size={64} color="#9ca3af" />
+            <h2>No forms yet</h2>
+            <p>Create your first form to get started</p>
+            <button className="btn btn-primary" onClick={createForm}>
+              Create Form
+            </button>
+          </div>
+        ) : (
+          <div className="forms-grid">
+            {forms.map(form => (
+              <div
+                key={form.id}
+                className="form-card"
+                onClick={() => navigate(`/form/${form.id}`)}
+              >
+                <div className="form-card-header">
+                  <FileText size={24} color="#4f46e5" />
+                  <div className="form-card-actions">
+                    <button
+                      className="icon-btn"
+                      onClick={(e) => copyShareLink(form.shareKey, e)}
+                      title="Copy share link"
+                    >
+                      <ExternalLink size={16} />
+                    </button>
+                    <button
+                      className="icon-btn danger"
+                      onClick={(e) => deleteForm(form.id, e)}
+                      title="Delete form"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+                <h3>{form.title}</h3>
+                <p className="form-meta">
+                  {form.fields?.length || 0} fields • Updated {new Date(form.updatedAt).toLocaleDateString()}
+                </p>
+                <div className="form-card-footer">
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      navigate(`/form/${form.id}/submissions`)
+                    }}
+                  >
+                    View Submissions
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

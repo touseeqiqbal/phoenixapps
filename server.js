@@ -8,6 +8,7 @@ const workspacesRouter = require("./routes/workspaces");
 const publicRouter = require("./routes/public");
 const authRouter = require("./routes/auth");
 const packagesRouter = require("./routes/packages");
+const submissionsRouter = require("./routes/submissions");
 const { authRequired } = require("./middleware/auth");
 
 const app = express();
@@ -26,18 +27,24 @@ app.use("/api/auth", authRouter);
 app.use("/api/packages", packagesRouter);
 app.use("/api/forms", authRequired, formsRouter);
 app.use("/api/workspaces", authRequired, workspacesRouter);
+app.use("/api/submissions", authRequired, submissionsRouter);
 app.use("/api/public", publicRouter);
 
+// Serve static files from public/dist in production, or public in development
 const publicDir = path.join(__dirname, "public");
-app.use(express.static(publicDir));
+const distDir = path.join(publicDir, "dist");
 
-app.get("/share/:shareKey", (_req, res) => {
-  res.sendFile(path.join(publicDir, "share.html"));
-});
+// Check if dist directory exists (production build)
+const staticDir = require("fs").existsSync(distDir) ? distDir : publicDir;
+app.use(express.static(staticDir));
 
+// Serve index.html for all non-API routes (SPA routing)
 app.use((req, res, next) => {
   if (req.method === "GET" && !req.path.startsWith("/api")) {
-    return res.sendFile(path.join(publicDir, "index.html"));
+    const indexPath = require("fs").existsSync(distDir) 
+      ? path.join(distDir, "index.html")
+      : path.join(publicDir, "index.html");
+    return res.sendFile(indexPath);
   }
   return next();
 });

@@ -1,0 +1,13 @@
+.settings-modal {
+  max-width: 600px;
+}
+
+.settings-content {
+  padding: 20px 0;
+}
+
+.settings-actions {
+  margin-top: 30px;
+  display: flex;
+  justify-content: flex-end;
+}

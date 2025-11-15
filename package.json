@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",
+    "build": "cd public && npm run build",
+    "install-frontend": "cd public && npm install",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
