@@ -20,6 +20,20 @@
   gap: 15px;
 }
 
+.builder-brand {
+  display: flex;
+  align-items: center;
+}
+
+.brand-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #4f46e5;
+  margin: 0;
+  padding: 0;
+  white-space: nowrap;
+}
+
 .form-title-input {
   flex: 1;
   font-size: 18px;

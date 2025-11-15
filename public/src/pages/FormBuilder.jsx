@@ -259,6 +259,9 @@ export default function FormBuilder() {
     <div className="form-builder">
       <header className="builder-header">
         <div className="builder-header-content">
+          <div className="builder-brand">
+            <h1 className="brand-title">Phoenix Form Builder</h1>
+          </div>
           <button className="btn btn-secondary" onClick={() => navigate('/dashboard')}>
             <ArrowLeft size={18} />
             Back
