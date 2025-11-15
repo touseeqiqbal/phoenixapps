@@ -1,19 +1,30 @@
 import { initializeApp } from 'firebase/app'
+import { getAnalytics } from 'firebase/analytics'
 import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 
-// Firebase configuration
-// Replace these with your actual Firebase config values
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: process.env.VITE_FIREBASE_API_KEY || "your-api-key",
-  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN || "your-project.firebaseapp.com",
-  projectId: process.env.VITE_FIREBASE_PROJECT_ID || "your-project-id",
-  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET || "your-project.appspot.com",
-  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "123456789",
-  appId: process.env.VITE_FIREBASE_APP_ID || "your-app-id"
+  apiKey: "AIzaSyBRCemB0XiP0bc05HtsyWF5B51-e_cCnpE",
+  authDomain: "phoenix-app-5a433.firebaseapp.com",
+  projectId: "phoenix-app-5a433",
+  storageBucket: "phoenix-app-5a433.firebasestorage.app",
+  messagingSenderId: "1027690637217",
+  appId: "1:1027690637217:web:c14f4475581a9098810de0",
+  measurementId: "G-MJ7HJNMFPF"
 }
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig)
+
+// Initialize Analytics (only in browser environment)
+let analytics = null
+if (typeof window !== 'undefined') {
+  try {
+    analytics = getAnalytics(app)
+  } catch (error) {
+    console.warn('Analytics initialization failed:', error)
+  }
+}
 
 // Initialize Firebase Authentication and get a reference to the service
 export const auth = getAuth(app)
@@ -28,5 +39,5 @@ const actionCodeSettings = {
 // Google Auth Provider
 export const googleProvider = new GoogleAuthProvider()
 
-export { actionCodeSettings }
+export { actionCodeSettings, analytics }
 export default app
