@@ -53,8 +53,6 @@ export default function FieldEditor({ field, onUpdate, onClose }) {
     }))
   }
 
-  const needsOptions = ['dropdown', 'radio', 'checkbox', 'single-choice', 'multiple-choice'].includes(field.type)
-
   return (
     <div className="field-editor">
       <div className="field-editor-header">
