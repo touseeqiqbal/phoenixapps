@@ -46,7 +46,8 @@ app.use(express.static(staticDir, {
 }));
 
 // Serve index.html for all non-API routes (SPA routing)
-app.get("*", (req, res, next) => {
+// Use app.use() instead of app.get("*") for Express 5 compatibility
+app.use((req, res, next) => {
   // Skip API routes
   if (req.path.startsWith("/api")) {
     return next();
@@ -54,6 +55,11 @@ app.get("*", (req, res, next) => {
   
   // Skip static file requests (they should be handled by static middleware)
   if (req.path.match(/\.(js|css|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|json|map)$/)) {
+    return next();
+  }
+  
+  // Only handle GET requests for SPA routing
+  if (req.method !== "GET") {
     return next();
   }
   
