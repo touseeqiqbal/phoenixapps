@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
+import ImageUpload from './ImageUpload'
 import '../styles/FieldEditor.css'
 
 export default function FieldEditor({ field, onUpdate, onClose }) {
+  const needsOptions = ['dropdown', 'radio', 'checkbox', 'single-choice', 'multiple-choice'].includes(field.type)
+  
   const [formData, setFormData] = useState({
     label: field.label || '',
     placeholder: field.placeholder || '',
     required: field.required || false,
     description: field.description || '',
-    options: field.options ? [...field.options] : [],
+    options: needsOptions ? (field.options && field.options.length > 0 ? [...field.options] : ['Option 1', 'Option 2']) : [],
     ...(field.type === 'number' && { min: field.min, max: field.max }),
     ...(field.type === 'rating' && { max: field.max || 5 }),
     ...(field.type === 'file' && { 
@@ -20,17 +23,20 @@ export default function FieldEditor({ field, onUpdate, onClose }) {
 
   useEffect(() => {
     onUpdate(formData)
-  }, [formData])
+  }, [formData, onUpdate])
 
   const updateField = (key, value) => {
     setFormData(prev => ({ ...prev, [key]: value }))
   }
 
   const addOption = () => {
-    setFormData(prev => ({
-      ...prev,
-      options: [...(prev.options || []), `Option ${(prev.options?.length || 0) + 1}`]
-    }))
+    setFormData(prev => {
+      const currentOptions = prev.options || []
+      return {
+        ...prev,
+        options: [...currentOptions, `Option ${currentOptions.length + 1}`]
+      }
+    })
   }
 
   const updateOption = (index, value) => {
@@ -215,28 +221,11 @@ export default function FieldEditor({ field, onUpdate, onClose }) {
         {field.type === 'logo' && (
           <>
             <div className="form-group">
-              <label>Logo Image URL</label>
-              <input
-                type="url"
-                className="input"
+              <ImageUpload
+                label="Logo Image"
                 value={formData.imageUrl || ''}
-                onChange={(e) => updateField('imageUrl', e.target.value)}
-                placeholder="https://example.com/logo.png"
+                onChange={(value) => updateField('imageUrl', value)}
               />
-              {formData.imageUrl && (
-                <div style={{ marginTop: '10px' }}>
-                  <img 
-                    src={formData.imageUrl} 
-                    alt="Logo preview" 
-                    style={{ maxWidth: '200px', maxHeight: '100px', borderRadius: '6px', border: '1px solid #e5e7eb' }}
-                    onError={(e) => {
-                      e.target.style.display = 'none'
-                      e.target.nextSibling.style.display = 'block'
-                    }}
-                  />
-                  <p style={{ display: 'none', color: '#ef4444', fontSize: '12px' }}>Invalid image URL</p>
-                </div>
-              )}
             </div>
             <div className="form-group">
               <label>Width (px)</label>

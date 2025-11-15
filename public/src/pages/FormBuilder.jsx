@@ -6,6 +6,7 @@ import FormCanvas from '../components/FormCanvas'
 import FormPreview from '../components/FormPreview'
 import FormSettings from '../components/FormSettings'
 import ConditionalLogic from '../components/ConditionalLogic'
+import FieldEditor from '../components/FieldEditor'
 import { Save, Eye, ArrowLeft, Share2, Copy, Check, GitBranch } from 'lucide-react'
 import '../styles/FormBuilder.css'
 
@@ -63,16 +64,18 @@ export default function FormBuilder() {
   }
 
   const addField = (fieldType) => {
+    const defaultProps = getDefaultProps(fieldType)
     const newField = {
       id: Date.now().toString(),
       type: fieldType,
       label: getDefaultLabel(fieldType),
       required: false,
       placeholder: '',
-      options: fieldType === 'dropdown' || fieldType === 'radio' || fieldType === 'checkbox' 
-        ? ['Option 1', 'Option 2'] 
-        : [],
-      ...getDefaultProps(fieldType)
+      ...defaultProps,
+      // Ensure options are set for choice fields
+      options: ['dropdown', 'radio', 'checkbox', 'single-choice', 'multiple-choice'].includes(fieldType)
+        ? (defaultProps.options || ['Option 1', 'Option 2'])
+        : (defaultProps.options || [])
     }
     setFields([...fields, newField])
     setSelectedField(newField)
@@ -320,6 +323,16 @@ export default function FormBuilder() {
           onDeleteField={deleteField}
           onMoveField={moveField}
         />
+        
+        {selectedField && (
+          <div className="field-editor-sidebar">
+            <FieldEditor
+              field={selectedField}
+              onUpdate={(updates) => updateField(selectedField.id, updates)}
+              onClose={() => setSelectedField(null)}
+            />
+          </div>
+        )}
       </div>
 
       {showPreview && (
@@ -341,8 +354,8 @@ export default function FormBuilder() {
 
       {showSettings && (
         <FormSettings
-          form={form}
-          onUpdate={(settings) => setForm({ ...form, settings })}
+          form={{ ...form, fields }}
+          onUpdate={(updates) => setForm({ ...form, ...updates })}
           onClose={() => setShowSettings(false)}
         />
       )}

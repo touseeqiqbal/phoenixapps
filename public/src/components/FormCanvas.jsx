@@ -1,6 +1,5 @@
 import { useDrop } from 'react-dnd'
 import FormField from './FormField'
-import FieldEditor from './FieldEditor'
 import '../styles/FormCanvas.css'
 
 export default function FormCanvas({
@@ -44,15 +43,6 @@ export default function FormCanvas({
         )}
       </div>
 
-      {selectedField && (
-        <div className="field-editor-panel">
-          <FieldEditor
-            field={selectedField}
-            onUpdate={(updates) => onUpdateField(selectedField.id, updates)}
-            onClose={() => onSelectField(null)}
-          />
-        </div>
-      )}
     </div>
   )
 }

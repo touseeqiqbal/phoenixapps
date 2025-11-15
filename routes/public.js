@@ -1,6 +1,7 @@
 const express = require("express");
 const fs = require("fs").promises;
 const path = require("path");
+const { sendSubmissionNotification } = require("../utils/emailService");
 
 const router = express.Router();
 const FORMS_FILE = path.join(__dirname, "../data/forms.json");
@@ -79,6 +80,31 @@ router.post("/form/:shareKey/submit", async (req, res) => {
 
     submissions.push(newSubmission);
     await saveSubmissions(submissions);
+
+    // Send email notifications if enabled
+    if (form.settings?.emailNotifications?.enabled) {
+      try {
+        const ownerEmail = form.settings.emailNotifications.notifyOwner 
+          ? form.settings.emailNotifications.ownerEmail 
+          : null;
+        
+        const submitterEmail = form.settings.emailNotifications.notifySubmitter 
+          ? submissionData[form.settings.emailNotifications.submitterEmailField]
+          : null;
+
+        if (ownerEmail || submitterEmail) {
+          await sendSubmissionNotification({
+            form,
+            submission: newSubmission,
+            ownerEmail,
+            submitterEmail
+          });
+        }
+      } catch (emailError) {
+        console.error("Email notification error:", emailError);
+        // Don't fail the submission if email fails
+      }
+    }
 
     res.json({
       success: true,

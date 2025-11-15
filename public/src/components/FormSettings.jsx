@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
+import ImageUpload from './ImageUpload'
 import '../styles/FormSettings.css'
 
 export default function FormSettings({ form, onUpdate, onClose }) {
@@ -12,6 +13,13 @@ export default function FormSettings({ form, onUpdate, onClose }) {
     backgroundColor: '#ffffff',
     logo: '',
     showPreviewBeforeSubmit: false,
+    emailNotifications: {
+      enabled: false,
+      notifyOwner: true,
+      notifySubmitter: false,
+      ownerEmail: '',
+      submitterEmailField: ''
+    }
   })
 
   useEffect(() => {
@@ -100,53 +108,19 @@ export default function FormSettings({ form, onUpdate, onClose }) {
           </div>
 
           <div className="form-group">
-            <label>Background Image URL</label>
-            <input
-              type="url"
-              className="input"
+            <ImageUpload
+              label="Background Image"
               value={settings.backgroundImage || ''}
-              onChange={(e) => updateSetting('backgroundImage', e.target.value)}
-              placeholder="https://example.com/image.jpg"
+              onChange={(value) => updateSetting('backgroundImage', value)}
             />
-            {settings.backgroundImage && (
-              <div style={{ marginTop: '10px' }}>
-                <img 
-                  src={settings.backgroundImage} 
-                  alt="Background preview" 
-                  style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '6px', border: '1px solid #e5e7eb' }}
-                  onError={(e) => {
-                    e.target.style.display = 'none'
-                    e.target.nextSibling.style.display = 'block'
-                  }}
-                />
-                <p style={{ display: 'none', color: '#ef4444', fontSize: '12px' }}>Invalid image URL</p>
-              </div>
-            )}
           </div>
 
           <div className="form-group">
-            <label>Form Logo URL</label>
-            <input
-              type="url"
-              className="input"
+            <ImageUpload
+              label="Form Logo"
               value={settings.logo || ''}
-              onChange={(e) => updateSetting('logo', e.target.value)}
-              placeholder="https://example.com/logo.png"
+              onChange={(value) => updateSetting('logo', value)}
             />
-            {settings.logo && (
-              <div style={{ marginTop: '10px' }}>
-                <img 
-                  src={settings.logo} 
-                  alt="Logo preview" 
-                  style={{ maxWidth: '200px', maxHeight: '100px', borderRadius: '6px', border: '1px solid #e5e7eb' }}
-                  onError={(e) => {
-                    e.target.style.display = 'none'
-                    e.target.nextSibling.style.display = 'block'
-                  }}
-                />
-                <p style={{ display: 'none', color: '#ef4444', fontSize: '12px' }}>Invalid image URL</p>
-              </div>
-            )}
           </div>
 
           <div className="form-group">
@@ -159,6 +133,93 @@ export default function FormSettings({ form, onUpdate, onClose }) {
               <span>Show preview before submit</span>
             </label>
           </div>
+
+          <div className="settings-section-divider">
+            <h3>Email Notifications</h3>
+          </div>
+
+          <div className="form-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={settings.emailNotifications?.enabled || false}
+                onChange={(e) => updateSetting('emailNotifications', {
+                  ...settings.emailNotifications,
+                  enabled: e.target.checked
+                })}
+              />
+              <span>Enable email notifications</span>
+            </label>
+          </div>
+
+          {settings.emailNotifications?.enabled && (
+            <>
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={settings.emailNotifications?.notifyOwner !== false}
+                    onChange={(e) => updateSetting('emailNotifications', {
+                      ...settings.emailNotifications,
+                      notifyOwner: e.target.checked
+                    })}
+                  />
+                  <span>Notify form owner when form is submitted</span>
+                </label>
+              </div>
+
+              {settings.emailNotifications?.notifyOwner && (
+                <div className="form-group">
+                  <label>Owner Email Address</label>
+                  <input
+                    type="email"
+                    className="input"
+                    value={settings.emailNotifications?.ownerEmail || ''}
+                    onChange={(e) => updateSetting('emailNotifications', {
+                      ...settings.emailNotifications,
+                      ownerEmail: e.target.value
+                    })}
+                    placeholder="owner@example.com"
+                  />
+                  <small className="help-text">Email address to receive submission notifications</small>
+                </div>
+              )}
+
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={settings.emailNotifications?.notifySubmitter || false}
+                    onChange={(e) => updateSetting('emailNotifications', {
+                      ...settings.emailNotifications,
+                      notifySubmitter: e.target.checked
+                    })}
+                  />
+                  <span>Send confirmation email to submitter</span>
+                </label>
+              </div>
+
+              {settings.emailNotifications?.notifySubmitter && (
+                <div className="form-group">
+                  <label>Email Field (for submitter notification)</label>
+                  <select
+                    className="input"
+                    value={settings.emailNotifications?.submitterEmailField || ''}
+                    onChange={(e) => updateSetting('emailNotifications', {
+                      ...settings.emailNotifications,
+                      submitterEmailField: e.target.value
+                    })}
+                  >
+                    <option value="">Select email field from form</option>
+                    {form.fields?.filter(f => f.type === 'email').map(field => (
+                      <option key={field.id} value={field.id}>{field.label}</option>
+                    ))}
+                  </select>
+                  <small className="help-text">Select which email field to use for submitter notifications</small>
+                </div>
+              )}
+            </>
+          )}
 
           <div className="settings-actions">
             <button className="btn btn-primary" onClick={onClose}>
