@@ -284,6 +284,7 @@ async function initInvitesFile() {
 // Get form members
 router.get("/:id/members", async (req, res) => {
   try {
+    const MEMBERS_FILE = getMembersFilePath();
     await initMembersFile();
     const data = await fs.readFile(MEMBERS_FILE, "utf8");
     const allMembers = JSON.parse(data);
@@ -299,7 +300,8 @@ router.get("/:id/members", async (req, res) => {
       // Get user info - try to get from users file
       let owner = null;
       try {
-        const usersFile = path.join(__dirname, "../data/users.json");
+        const { getDataFilePath } = require("../utils/dataPath");
+        const usersFile = getDataFilePath("users.json");
         const usersData = await fs.readFile(usersFile, "utf8");
         const users = JSON.parse(usersData);
         owner = users.find(u => u.uid === form.userId);
@@ -328,6 +330,7 @@ router.get("/:id/members", async (req, res) => {
 // Get form invites
 router.get("/:id/invites", async (req, res) => {
   try {
+    const INVITES_FILE = getInvitesFilePath();
     await initInvitesFile();
     const data = await fs.readFile(INVITES_FILE, "utf8");
     const allInvites = JSON.parse(data);
@@ -352,6 +355,7 @@ router.post("/:id/invites", async (req, res) => {
       return res.status(403).json({ error: "Only form owner can invite members" });
     }
 
+    const INVITES_FILE = getInvitesFilePath();
     await initInvitesFile();
     const data = await fs.readFile(INVITES_FILE, "utf8");
     const allInvites = JSON.parse(data);
@@ -369,7 +373,9 @@ router.post("/:id/invites", async (req, res) => {
     };
 
     allInvites[req.params.id].push(invite);
-    await fs.writeFile(INVITES_FILE, JSON.stringify(allInvites, null, 2));
+    const dir = path.dirname(INVITES_FILE);
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(INVITES_FILE, JSON.stringify(allInvites, null, 2), 'utf8');
 
     res.json(invite);
   } catch (error) {
@@ -381,6 +387,7 @@ router.post("/:id/invites", async (req, res) => {
 // Cancel invite
 router.delete("/:id/invites/:inviteId", async (req, res) => {
   try {
+    const INVITES_FILE = getInvitesFilePath();
     await initInvitesFile();
     const data = await fs.readFile(INVITES_FILE, "utf8");
     const allInvites = JSON.parse(data);
@@ -389,7 +396,9 @@ router.delete("/:id/invites/:inviteId", async (req, res) => {
       allInvites[req.params.id] = allInvites[req.params.id].filter(
         i => i.id !== req.params.inviteId
       );
-      await fs.writeFile(INVITES_FILE, JSON.stringify(allInvites, null, 2));
+      const dir = path.dirname(INVITES_FILE);
+      await fs.mkdir(dir, { recursive: true });
+      await fs.writeFile(INVITES_FILE, JSON.stringify(allInvites, null, 2), 'utf8');
     }
 
     res.json({ success: true });
@@ -413,6 +422,7 @@ router.put("/:id/members/:memberId", async (req, res) => {
       return res.status(403).json({ error: "Only form owner can update roles" });
     }
 
+    const MEMBERS_FILE = getMembersFilePath();
     await initMembersFile();
     const data = await fs.readFile(MEMBERS_FILE, "utf8");
     const allMembers = JSON.parse(data);
@@ -424,7 +434,9 @@ router.put("/:id/members/:memberId", async (req, res) => {
     const memberIndex = allMembers[req.params.id].findIndex(m => m.id === req.params.memberId);
     if (memberIndex !== -1) {
       allMembers[req.params.id][memberIndex].role = req.body.role;
-      await fs.writeFile(MEMBERS_FILE, JSON.stringify(allMembers, null, 2));
+      const dir = path.dirname(MEMBERS_FILE);
+      await fs.mkdir(dir, { recursive: true });
+      await fs.writeFile(MEMBERS_FILE, JSON.stringify(allMembers, null, 2), 'utf8');
     }
 
     res.json({ success: true });
@@ -448,6 +460,7 @@ router.delete("/:id/members/:memberId", async (req, res) => {
       return res.status(403).json({ error: "Only form owner can remove members" });
     }
 
+    const MEMBERS_FILE = getMembersFilePath();
     await initMembersFile();
     const data = await fs.readFile(MEMBERS_FILE, "utf8");
     const allMembers = JSON.parse(data);
@@ -456,7 +469,9 @@ router.delete("/:id/members/:memberId", async (req, res) => {
       allMembers[req.params.id] = allMembers[req.params.id].filter(
         m => m.id !== req.params.memberId
       );
-      await fs.writeFile(MEMBERS_FILE, JSON.stringify(allMembers, null, 2));
+      const dir = path.dirname(MEMBERS_FILE);
+      await fs.mkdir(dir, { recursive: true });
+      await fs.writeFile(MEMBERS_FILE, JSON.stringify(allMembers, null, 2), 'utf8');
     }
 
     res.json({ success: true });
