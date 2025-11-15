@@ -15,11 +15,15 @@ api.interceptors.request.use(
       if (user) {
         const token = await user.getIdToken()
         config.headers.Authorization = `Bearer ${token}`
+        console.log('Token added to request:', token.substring(0, 20) + '...')
       } else {
         // Try to get token from localStorage as fallback
         const storedToken = localStorage.getItem('firebase_token')
         if (storedToken) {
           config.headers.Authorization = `Bearer ${storedToken}`
+          console.log('Using stored token from localStorage')
+        } else {
+          console.warn('No Firebase user and no stored token found')
         }
       }
     } catch (error) {
@@ -28,6 +32,25 @@ api.interceptors.request.use(
     return config
   },
   (error) => {
+    return Promise.reject(error)
+  }
+)
+
+// Add response interceptor for error logging
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      console.error('API Error Response:', {
+        status: error.response.status,
+        data: error.response.data,
+        url: error.config?.url
+      })
+    } else if (error.request) {
+      console.error('API Request Error:', error.request)
+    } else {
+      console.error('API Error:', error.message)
+    }
     return Promise.reject(error)
   }
 )

@@ -22,8 +22,11 @@ exports.authRequired = async (req, res, next) => {
     const token = req.cookies?.token || req.headers?.authorization?.replace("Bearer ", "");
 
     if (!token) {
+      console.log("No token found in request");
       return res.status(401).json({ error: "Authentication required" });
     }
+
+    console.log("Token received, length:", token.length);
 
     // Try Firebase token verification first
     if (firebaseInitialized) {
@@ -64,19 +67,30 @@ exports.authRequired = async (req, res, next) => {
       }
     } else {
       // Firebase Admin not initialized - try to decode token payload
+      console.log("Firebase Admin not initialized, decoding token payload...");
       try {
         const parts = token.split('.');
         if (parts.length === 3) {
           const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-          req.user = {
-            id: payload.user_id || payload.sub || payload.uid,
-            uid: payload.user_id || payload.sub || payload.uid,
-            email: payload.email
-          };
-          return next();
+          console.log("Decoded token payload:", JSON.stringify(payload, null, 2));
+          const userId = payload.user_id || payload.sub || payload.uid;
+          if (userId) {
+            req.user = {
+              id: userId,
+              uid: userId,
+              email: payload.email
+            };
+            console.log("User authenticated:", req.user);
+            return next();
+          } else {
+            console.error("No user_id found in token payload");
+          }
+        } else {
+          console.error("Invalid token format - expected 3 parts, got:", parts.length);
         }
       } catch (decodeError) {
-        console.warn("Token decode failed:", decodeError.message);
+        console.error("Token decode failed:", decodeError.message);
+        console.error("Token decode stack:", decodeError.stack);
       }
     }
 

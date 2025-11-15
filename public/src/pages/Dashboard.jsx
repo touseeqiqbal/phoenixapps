@@ -36,7 +36,9 @@ export default function Dashboard() {
       navigate(`/form/${response.data.id}`)
     } catch (error) {
       console.error('Failed to create form:', error)
-      alert('Failed to create form')
+      const errorMessage = error.response?.data?.error || error.response?.data?.details || error.message || 'Failed to create form'
+      console.error('Error details:', error.response?.data)
+      alert(`Failed to create form: ${errorMessage}`)
     }
   }
 

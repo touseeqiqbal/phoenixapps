@@ -24,7 +24,13 @@ async function getForms() {
 
 // Save forms
 async function saveForms(forms) {
-  await fs.writeFile(FORMS_FILE, JSON.stringify(forms, null, 2));
+  try {
+    await fs.writeFile(FORMS_FILE, JSON.stringify(forms, null, 2));
+    console.log("Forms saved successfully, count:", forms.length);
+  } catch (error) {
+    console.error("Error saving forms:", error);
+    throw error;
+  }
 }
 
 // Get user's forms
@@ -65,19 +71,32 @@ router.get("/:id", async (req, res) => {
 // Create form
 router.post("/", async (req, res) => {
   try {
+    console.log("Create form request received");
+    console.log("Request user:", req.user);
+    console.log("Request body:", req.body);
+
     const { title, fields, settings } = req.body;
 
     // Check if user is authenticated
-    if (!req.user || (!req.user.uid && !req.user.id)) {
-      return res.status(401).json({ error: "User not authenticated" });
+    if (!req.user) {
+      console.error("No user object in request");
+      return res.status(401).json({ error: "User not authenticated", details: "req.user is undefined" });
+    }
+
+    if (!req.user.uid && !req.user.id) {
+      console.error("User object missing uid/id:", JSON.stringify(req.user));
+      return res.status(401).json({ error: "User not authenticated", details: "User ID not found" });
     }
 
     const forms = await getForms();
     const userId = req.user.uid || req.user.id;
     
     if (!userId) {
-      return res.status(401).json({ error: "Invalid user ID" });
+      console.error("Invalid user ID extracted");
+      return res.status(401).json({ error: "Invalid user ID", details: "Could not extract user ID" });
     }
+
+    console.log("Creating form for user:", userId);
 
     const newForm = {
       id: crypto.randomBytes(16).toString("hex"),
@@ -98,10 +117,16 @@ router.post("/", async (req, res) => {
     forms.push(newForm);
     await saveForms(forms);
 
+    console.log("Form created successfully:", newForm.id);
     res.status(201).json(newForm);
   } catch (error) {
     console.error("Create form error:", error);
-    res.status(500).json({ error: "Failed to create form", details: error.message });
+    console.error("Error stack:", error.stack);
+    res.status(500).json({ 
+      error: "Failed to create form", 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
