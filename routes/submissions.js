@@ -30,7 +30,8 @@ async function getForms() {
 router.get("/", async (req, res) => {
   try {
     const forms = await getForms();
-    const userForms = forms.filter((f) => f.userId === req.user.id);
+    const userId = req.user.uid || req.user.id;
+    const userForms = forms.filter((f) => f.userId === userId);
     const formIds = userForms.map((f) => f.id);
 
     const submissions = await getSubmissions();
@@ -62,7 +63,8 @@ router.get("/form/:formId", async (req, res) => {
       return res.status(404).json({ error: "Form not found" });
     }
 
-    if (form.userId !== req.user.id) {
+    const userId = req.user.uid || req.user.id;
+    if (form.userId !== userId) {
       return res.status(403).json({ error: "Access denied" });
     }
 
@@ -80,7 +82,8 @@ router.get("/form/:formId", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   try {
     const forms = await getForms();
-    const userForms = forms.filter((f) => f.userId === req.user.id);
+    const userId = req.user.uid || req.user.id;
+    const userForms = forms.filter((f) => f.userId === userId);
     const formIds = userForms.map((f) => f.id);
 
     const submissions = await getSubmissions();

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../utils/AuthContext'
+import { Chrome } from 'lucide-react'
 import '../styles/Login.css'
 
 export default function Register() {
@@ -9,7 +10,7 @@ export default function Register() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { register } = useAuth()
+  const { register, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
@@ -21,7 +22,20 @@ export default function Register() {
       await register(email, password, name)
       navigate('/dashboard')
     } catch (err) {
-      setError(err.response?.data?.error || 'Registration failed')
+      setError(err.message || err.code || 'Registration failed. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGoogleLogin = async () => {
+    setError('')
+    setLoading(true)
+    try {
+      await loginWithGoogle()
+      navigate('/dashboard')
+    } catch (err) {
+      setError(err.message || 'Google login failed')
     } finally {
       setLoading(false)
     }
@@ -74,6 +88,19 @@ export default function Register() {
             {loading ? 'Creating account...' : 'Sign up'}
           </button>
         </form>
+
+        <div className="auth-divider">
+          <span>OR</span>
+        </div>
+
+        <button 
+          className="btn btn-google" 
+          onClick={handleGoogleLogin}
+          disabled={loading}
+        >
+          <Chrome size={18} />
+          Sign up with Google
+        </button>
         
         <p className="auth-footer">
           Already have an account? <Link to="/login">Sign in</Link>

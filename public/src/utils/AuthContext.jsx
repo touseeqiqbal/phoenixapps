@@ -1,49 +1,134 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import axios from 'axios'
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  updateProfile
+} from 'firebase/auth'
+import { auth, googleProvider } from './firebase'
+import api from './api'
 
 const AuthContext = createContext()
-
-axios.defaults.baseURL = '/api'
-axios.defaults.withCredentials = true
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    checkAuth()
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Get Firebase ID token
+        const token = await firebaseUser.getIdToken()
+        
+        // Store user info
+        const userData = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0],
+          photoURL: firebaseUser.photoURL
+        }
+        
+        setUser(userData)
+        
+        // Send token to backend for verification
+        try {
+          await api.post('/auth/verify-firebase-token', { token })
+        } catch (error) {
+          console.error('Token verification failed:', error)
+        }
+      } else {
+        setUser(null)
+      }
+      setLoading(false)
+    })
+
+    return () => unsubscribe()
   }, [])
 
-  const checkAuth = async () => {
+  const login = async (email, password) => {
     try {
-      const response = await axios.get('/auth/me')
-      setUser(response.data.user)
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const token = await userCredential.user.getIdToken()
+      
+      // Verify token with backend
+      await api.post('/auth/verify-firebase-token', { token })
+      
+      return {
+        user: {
+          uid: userCredential.user.uid,
+          email: userCredential.user.email,
+          name: userCredential.user.displayName || userCredential.user.email?.split('@')[0],
+          photoURL: userCredential.user.photoURL
+        }
+      }
     } catch (error) {
-      setUser(null)
-    } finally {
-      setLoading(false)
+      throw error
     }
   }
 
-  const login = async (email, password) => {
-    const response = await axios.post('/auth/login', { email, password })
-    setUser(response.data.user)
-    return response.data
+  const register = async (email, password, name) => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      
+      // Update profile with name
+      if (name) {
+        await updateProfile(userCredential.user, { displayName: name })
+      }
+      
+      const token = await userCredential.user.getIdToken()
+      
+      // Verify token with backend
+      await api.post('/auth/verify-firebase-token', { token })
+      
+      return {
+        user: {
+          uid: userCredential.user.uid,
+          email: userCredential.user.email,
+          name: name || userCredential.user.email?.split('@')[0],
+          photoURL: userCredential.user.photoURL
+        }
+      }
+    } catch (error) {
+      throw error
+    }
   }
 
-  const register = async (email, password, name) => {
-    const response = await axios.post('/auth/register', { email, password, name })
-    setUser(response.data.user)
-    return response.data
+  const loginWithGoogle = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider)
+      const token = await result.user.getIdToken()
+      
+      // Verify token with backend
+      await api.post('/auth/verify-firebase-token', { token })
+      
+      return {
+        user: {
+          uid: result.user.uid,
+          email: result.user.email,
+          name: result.user.displayName || result.user.email?.split('@')[0],
+          photoURL: result.user.photoURL
+        }
+      }
+    } catch (error) {
+      throw error
+    }
   }
 
   const logout = async () => {
-    await axios.post('/auth/logout')
-    setUser(null)
+    try {
+      await firebaseSignOut(auth)
+      await api.post('/auth/logout')
+      setUser(null)
+    } catch (error) {
+      console.error('Logout error:', error)
+      throw error
+    }
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, checkAuth }}>
+    <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   )

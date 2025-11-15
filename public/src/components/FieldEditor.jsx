@@ -47,7 +47,7 @@ export default function FieldEditor({ field, onUpdate, onClose }) {
     }))
   }
 
-  const needsOptions = ['dropdown', 'radio', 'checkbox'].includes(field.type)
+  const needsOptions = ['dropdown', 'radio', 'checkbox', 'single-choice', 'multiple-choice'].includes(field.type)
 
   return (
     <div className="field-editor">
@@ -103,25 +103,36 @@ export default function FieldEditor({ field, onUpdate, onClose }) {
         {needsOptions && (
           <div className="form-group">
             <label>Options</label>
-            {formData.options?.map((option, idx) => (
-              <div key={idx} className="option-item">
-                <input
-                  type="text"
-                  className="input"
-                  value={option}
-                  onChange={(e) => updateOption(idx, e.target.value)}
-                />
-                <button
-                  className="btn btn-danger btn-sm"
-                  onClick={() => removeOption(idx)}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+            <div className="options-list">
+              {formData.options && formData.options.length > 0 ? (
+                formData.options.map((option, idx) => (
+                  <div key={idx} className="option-item">
+                    <input
+                      type="text"
+                      className="input"
+                      value={option}
+                      onChange={(e) => updateOption(idx, e.target.value)}
+                      placeholder={`Option ${idx + 1}`}
+                    />
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={() => removeOption(idx)}
+                      title="Remove option"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="no-options-text">No options yet. Click "Add Option" to add one.</p>
+              )}
+            </div>
             <button className="btn btn-secondary btn-sm" onClick={addOption}>
-              Add Option
+              + Add Option
             </button>
+            {formData.options && formData.options.length === 0 && (
+              <small className="help-text">Add at least one option for users to choose from</small>
+            )}
           </div>
         )}
 

@@ -23,14 +23,48 @@
   gap: 15px;
 }
 
+.options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 8px;
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
 .option-item {
   display: flex;
   gap: 8px;
-  margin-bottom: 8px;
+  align-items: center;
 }
 
 .option-item .input {
   flex: 1;
+}
+
+.option-item .btn {
+  min-width: 40px;
+  padding: 8px 12px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.no-options-text {
+  color: #9ca3af;
+  font-size: 14px;
+  font-style: italic;
+  padding: 10px;
+  text-align: center;
+}
+
+.help-text {
+  display: block;
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 12px;
 }
 
 .checkbox-label {

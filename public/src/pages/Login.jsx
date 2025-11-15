@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../utils/AuthContext'
+import { Chrome } from 'lucide-react'
 import '../styles/Login.css'
 
 export default function Login() {
@@ -8,7 +9,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { login } = useAuth()
+  const { login, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
@@ -20,7 +21,20 @@ export default function Login() {
       await login(email, password)
       navigate('/dashboard')
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed')
+      setError(err.message || err.code || 'Login failed. Please check your credentials.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGoogleLogin = async () => {
+    setError('')
+    setLoading(true)
+    try {
+      await loginWithGoogle()
+      navigate('/dashboard')
+    } catch (err) {
+      setError(err.message || 'Google login failed')
     } finally {
       setLoading(false)
     }
@@ -61,6 +75,19 @@ export default function Login() {
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
+
+        <div className="auth-divider">
+          <span>OR</span>
+        </div>
+
+        <button 
+          className="btn btn-google" 
+          onClick={handleGoogleLogin}
+          disabled={loading}
+        >
+          <Chrome size={18} />
+          Sign in with Google
+        </button>
         
         <p className="auth-footer">
           Don't have an account? <Link to="/register">Sign up</Link>

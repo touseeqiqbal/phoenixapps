@@ -1,14 +1,30 @@
 const express = require("express");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+const admin = require("firebase-admin");
 const fs = require("fs").promises;
 const path = require("path");
-const config = require("../config");
 
 const router = express.Router();
 const USERS_FILE = path.join(__dirname, "../data/users.json");
 
-// Initialize users file if it doesn't exist
+// Initialize Firebase Admin if credentials are provided
+let firebaseInitialized = false;
+try {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    firebaseInitialized = true;
+  } else if (process.env.FIREBASE_PROJECT_ID) {
+    // Initialize with default credentials (for App Engine, Cloud Functions, etc.)
+    admin.initializeApp();
+    firebaseInitialized = true;
+  }
+} catch (error) {
+  console.warn("Firebase Admin not initialized. Using fallback authentication.");
+}
+
+// Initialize users file
 async function initUsersFile() {
   try {
     await fs.access(USERS_FILE);
@@ -29,101 +45,102 @@ async function saveUsers(users) {
   await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
 }
 
-// Register
-router.post("/register", async (req, res) => {
+// Verify Firebase token
+router.post("/verify-firebase-token", async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const { token } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
+    if (!token) {
+      return res.status(400).json({ error: "Token is required" });
     }
 
+    if (!firebaseInitialized) {
+      // Fallback: accept token without verification (for development)
+      console.warn("Firebase Admin not initialized. Accepting token without verification.");
+      return res.json({ 
+        success: true, 
+        message: "Token accepted (Firebase not configured)" 
+      });
+    }
+
+    // Verify the Firebase ID token
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    
+    // Get or create user in our database
     const users = await getUsers();
-    if (users.find((u) => u.email === email)) {
-      return res.status(400).json({ error: "User already exists" });
+    let user = users.find((u) => u.uid === decodedToken.uid);
+
+    if (!user) {
+      // Create new user
+      user = {
+        id: decodedToken.uid,
+        uid: decodedToken.uid,
+        email: decodedToken.email,
+        name: decodedToken.name || decodedToken.email?.split("@")[0],
+        photoURL: decodedToken.picture,
+        createdAt: new Date().toISOString(),
+        provider: decodedToken.firebase.sign_in_provider
+      };
+      users.push(user);
+      await saveUsers(users);
+    } else {
+      // Update existing user info
+      user.email = decodedToken.email;
+      user.name = decodedToken.name || user.name;
+      user.photoURL = decodedToken.picture || user.photoURL;
+      await saveUsers(users);
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = {
-      id: Date.now().toString(),
-      email,
-      password: hashedPassword,
-      name: name || email.split("@")[0],
-      createdAt: new Date().toISOString(),
-    };
-
-    users.push(newUser);
-    await saveUsers(users);
-
-    const token = jwt.sign({ id: newUser.id, email: newUser.email }, config.jwtSecret, {
-      expiresIn: config.jwtExpiresIn,
-    });
-
-    res.cookie("token", token, { httpOnly: true, maxAge: 12 * 60 * 60 * 1000 });
     res.json({
-      user: { id: newUser.id, email: newUser.email, name: newUser.name },
-      token,
+      success: true,
+      user: {
+        id: user.id,
+        uid: user.uid,
+        email: user.email,
+        name: user.name,
+        photoURL: user.photoURL
+      }
     });
   } catch (error) {
-    console.error("Register error:", error);
-    res.status(500).json({ error: "Registration failed" });
-  }
-});
-
-// Login
-router.post("/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required" });
-    }
-
-    const users = await getUsers();
-    const user = users.find((u) => u.email === email);
-
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    const token = jwt.sign({ id: user.id, email: user.email }, config.jwtSecret, {
-      expiresIn: config.jwtExpiresIn,
-    });
-
-    res.cookie("token", token, { httpOnly: true, maxAge: 12 * 60 * 60 * 1000 });
-    res.json({
-      user: { id: user.id, email: user.email, name: user.name },
-      token,
-    });
-  } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ error: "Login failed" });
+    console.error("Token verification error:", error);
+    res.status(401).json({ error: "Invalid token" });
   }
 });
 
 // Logout
 router.post("/logout", (req, res) => {
-  res.clearCookie("token");
   res.json({ message: "Logged out successfully" });
 });
 
-// Get current user
+// Get current user (for compatibility)
 router.get("/me", async (req, res) => {
   try {
-    const token = req.cookies?.token || req.headers?.authorization?.replace("Bearer ", "");
+    const token = req.headers?.authorization?.replace("Bearer ", "");
     if (!token) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const decoded = jwt.verify(token, config.jwtSecret);
-    const users = await getUsers();
-    const user = users.find((u) => u.id === decoded.id);
+    if (firebaseInitialized) {
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      const users = await getUsers();
+      const user = users.find((u) => u.uid === decodedToken.uid);
 
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({ 
+        user: { 
+          id: user.id, 
+          uid: user.uid,
+          email: user.email, 
+          name: user.name,
+          photoURL: user.photoURL
+        } 
+      });
+    } else {
+      res.status(401).json({ error: "Firebase not configured" });
     }
-
-    res.json({ user: { id: user.id, email: user.email, name: user.name } });
   } catch (error) {
     res.status(401).json({ error: "Invalid token" });
   }

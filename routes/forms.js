@@ -31,7 +31,8 @@ async function saveForms(forms) {
 router.get("/", async (req, res) => {
   try {
     const forms = await getForms();
-    const userForms = forms.filter((f) => f.userId === req.user.id);
+    const userId = req.user.uid || req.user.id; // Support both Firebase UID and legacy ID
+    const userForms = forms.filter((f) => f.userId === userId);
     res.json(userForms);
   } catch (error) {
     console.error("Get forms error:", error);
@@ -49,7 +50,8 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ error: "Form not found" });
     }
 
-    if (form.userId !== req.user.id) {
+    const userId = req.user.uid || req.user.id;
+    if (form.userId !== userId) {
       return res.status(403).json({ error: "Access denied" });
     }
 
@@ -66,9 +68,10 @@ router.post("/", async (req, res) => {
     const { title, fields, settings } = req.body;
 
     const forms = await getForms();
+    const userId = req.user.uid || req.user.id;
     const newForm = {
       id: crypto.randomBytes(16).toString("hex"),
-      userId: req.user.id,
+      userId: userId,
       title: title || "Untitled Form",
       fields: fields || [],
       settings: settings || {
@@ -102,7 +105,8 @@ router.put("/:id", async (req, res) => {
       return res.status(404).json({ error: "Form not found" });
     }
 
-    if (forms[formIndex].userId !== req.user.id) {
+    const userId = req.user.uid || req.user.id;
+    if (forms[formIndex].userId !== userId) {
       return res.status(403).json({ error: "Access denied" });
     }
 
@@ -136,7 +140,8 @@ router.delete("/:id", async (req, res) => {
       return res.status(404).json({ error: "Form not found" });
     }
 
-    if (forms[formIndex].userId !== req.user.id) {
+    const userId = req.user.uid || req.user.id;
+    if (forms[formIndex].userId !== userId) {
       return res.status(403).json({ error: "Access denied" });
     }
 
