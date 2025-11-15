@@ -2,9 +2,10 @@ const express = require("express");
 const admin = require("firebase-admin");
 const fs = require("fs").promises;
 const path = require("path");
+const { getDataFilePath } = require("../utils/dataPath");
 
 const router = express.Router();
-const USERS_FILE = path.join(__dirname, "../data/users.json");
+const USERS_FILE = getDataFilePath("users.json");
 
 // Initialize Firebase Admin if credentials are provided
 let firebaseInitialized = false;

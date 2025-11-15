@@ -1,10 +1,11 @@
 const express = require("express");
 const fs = require("fs").promises;
 const path = require("path");
+const { getDataFilePath } = require("../utils/dataPath");
 
 const router = express.Router();
-const SUBMISSIONS_FILE = path.join(__dirname, "../data/submissions.json");
-const FORMS_FILE = path.join(__dirname, "../data/forms.json");
+const SUBMISSIONS_FILE = getDataFilePath("submissions.json");
+const FORMS_FILE = getDataFilePath("forms.json");
 
 // Initialize submissions file
 async function initSubmissionsFile() {

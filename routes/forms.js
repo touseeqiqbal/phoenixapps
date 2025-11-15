@@ -2,9 +2,10 @@ const express = require("express");
 const fs = require("fs").promises;
 const path = require("path");
 const crypto = require("crypto");
+const { getDataFilePath } = require("../utils/dataPath");
 
 const router = express.Router();
-const FORMS_FILE = path.join(__dirname, "../data/forms.json");
+const FORMS_FILE = getDataFilePath("forms.json");
 
 // Initialize forms file
 async function initFormsFile() {
@@ -191,8 +192,8 @@ router.delete("/:id", async (req, res) => {
 });
 
 // Team Collaboration Routes
-const MEMBERS_FILE = path.join(__dirname, "../data/members.json");
-const INVITES_FILE = path.join(__dirname, "../data/invites.json");
+const MEMBERS_FILE = getDataFilePath("members.json");
+const INVITES_FILE = getDataFilePath("invites.json");
 
 async function initMembersFile() {
   try {

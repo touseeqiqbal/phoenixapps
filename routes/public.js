@@ -2,10 +2,11 @@ const express = require("express");
 const fs = require("fs").promises;
 const path = require("path");
 const { sendSubmissionNotification } = require("../utils/emailService");
+const { getDataFilePath } = require("../utils/dataPath");
 
 const router = express.Router();
-const FORMS_FILE = path.join(__dirname, "../data/forms.json");
-const SUBMISSIONS_FILE = path.join(__dirname, "../data/submissions.json");
+const FORMS_FILE = getDataFilePath("forms.json");
+const SUBMISSIONS_FILE = getDataFilePath("submissions.json");
 
 // Get forms
 async function getForms() {
