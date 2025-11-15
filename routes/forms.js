@@ -1,6 +1,5 @@
 const express = require("express");
 const fs = require("fs").promises;
-const fsSync = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { getDataFilePath } = require("../utils/dataPath");
@@ -18,22 +17,28 @@ async function initFormsFile() {
   const FORMS_FILE = getFormsFilePath();
   try {
     await fs.access(FORMS_FILE);
+    // File exists, nothing to do
   } catch (error) {
-      // File doesn't exist, create it
+    // File doesn't exist, create it
     try {
       // Ensure directory exists
       const dir = path.dirname(FORMS_FILE);
+      console.log("Creating directory for forms file:", dir);
       await fs.mkdir(dir, { recursive: true });
       
       // Create empty forms array file
+      console.log("Creating forms file at:", FORMS_FILE);
       await fs.writeFile(FORMS_FILE, JSON.stringify([], null, 2), 'utf8');
       console.log("Forms file initialized at:", FORMS_FILE);
     } catch (writeError) {
       console.error("Error initializing forms file:", writeError);
       console.error("File path:", FORMS_FILE);
+      console.error("Directory:", path.dirname(FORMS_FILE));
       console.error("Error details:", {
         code: writeError.code,
         message: writeError.message,
+        errno: writeError.errno,
+        syscall: writeError.syscall,
         stack: writeError.stack
       });
       throw writeError;
@@ -58,16 +63,8 @@ async function saveForms(forms) {
     console.log("Creating directory if needed:", dir);
     await fs.mkdir(dir, { recursive: true });
     
-    // Verify directory is writable by checking if we can access it
-    try {
-      await fs.access(dir, fsSync.constants.W_OK);
-      console.log("Directory is writable:", dir);
-    } catch (accessError) {
-      console.error("Directory is NOT writable:", dir);
-      console.error("Access error:", accessError);
-      // Don't throw here - try to write anyway, the writeFile will fail with a better error
-      console.warn("Warning: Directory access check failed, but attempting write anyway");
-    }
+    // Note: We'll let writeFile fail if directory is not writable
+    // This provides a clearer error message
     
     // Write file
     console.log("Writing forms file to:", FORMS_FILE);
