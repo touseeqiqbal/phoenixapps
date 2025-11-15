@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../utils/AuthContext'
 import api from '../utils/api'
-import { Plus, FileText, Trash2, ExternalLink, Table, BarChart, Workflow } from 'lucide-react'
+import { Plus, FileText, Trash2, ExternalLink, Table, BarChart, Workflow, Settings } from 'lucide-react'
 import '../styles/Dashboard.css'
 
 export default function Dashboard() {
@@ -77,6 +77,14 @@ export default function Dashboard() {
             </div>
             <div className="header-actions">
               <span className="user-name">{user?.name || user?.email}</span>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => navigate('/account-settings')}
+                title="Account Settings"
+              >
+                <Settings size={16} />
+                Settings
+              </button>
               <button className="btn btn-secondary" onClick={logout}>
                 Logout
               </button>

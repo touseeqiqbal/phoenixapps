@@ -201,4 +201,195 @@ router.get("/me", async (req, res) => {
   }
 });
 
+// Get account data
+router.get("/account", async (req, res) => {
+  try {
+    const token = req.headers?.authorization?.replace("Bearer ", "");
+    if (!token) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    let userId;
+    if (firebaseInitialized) {
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      userId = decodedToken.uid;
+    } else {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+        userId = payload.user_id || payload.sub || payload.uid;
+      }
+    }
+
+    if (!userId) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const users = await getUsers();
+    const user = users.find((u) => u.uid === userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({
+      name: user.name,
+      email: user.email,
+      companyName: user.companyName || '',
+      accountType: user.accountType || 'personal',
+      accountStatus: user.accountStatus || 'active',
+      notifications: user.notifications || {},
+      businessInfo: user.businessInfo || {}
+    });
+  } catch (error) {
+    console.error("Get account error:", error);
+    res.status(500).json({ error: "Failed to fetch account data" });
+  }
+});
+
+// Update account
+router.put("/account", async (req, res) => {
+  try {
+    const token = req.headers?.authorization?.replace("Bearer ", "");
+    if (!token) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    let userId;
+    if (firebaseInitialized) {
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      userId = decodedToken.uid;
+    } else {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+        userId = payload.user_id || payload.sub || payload.uid;
+      }
+    }
+
+    if (!userId) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const users = await getUsers();
+    const userIndex = users.findIndex((u) => u.uid === userId);
+
+    if (userIndex === -1) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const { name, email, companyName, accountType } = req.body;
+    users[userIndex] = {
+      ...users[userIndex],
+      name: name || users[userIndex].name,
+      email: email || users[userIndex].email,
+      companyName: companyName || users[userIndex].companyName,
+      accountType: accountType || users[userIndex].accountType,
+      updatedAt: new Date().toISOString()
+    };
+
+    await saveUsers(users);
+
+    res.json({
+      success: true,
+      user: {
+        id: users[userIndex].id,
+        uid: users[userIndex].uid,
+        email: users[userIndex].email,
+        name: users[userIndex].name,
+        photoURL: users[userIndex].photoURL,
+        companyName: users[userIndex].companyName,
+        accountType: users[userIndex].accountType
+      }
+    });
+  } catch (error) {
+    console.error("Update account error:", error);
+    res.status(500).json({ error: "Failed to update account" });
+  }
+});
+
+// Update notifications
+router.put("/account/notifications", async (req, res) => {
+  try {
+    const token = req.headers?.authorization?.replace("Bearer ", "");
+    if (!token) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    let userId;
+    if (firebaseInitialized) {
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      userId = decodedToken.uid;
+    } else {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+        userId = payload.user_id || payload.sub || payload.uid;
+      }
+    }
+
+    if (!userId) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const users = await getUsers();
+    const userIndex = users.findIndex((u) => u.uid === userId);
+
+    if (userIndex === -1) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    users[userIndex].notifications = req.body;
+    users[userIndex].updatedAt = new Date().toISOString();
+    await saveUsers(users);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Update notifications error:", error);
+    res.status(500).json({ error: "Failed to update notifications" });
+  }
+});
+
+// Update business info
+router.put("/account/business", async (req, res) => {
+  try {
+    const token = req.headers?.authorization?.replace("Bearer ", "");
+    if (!token) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    let userId;
+    if (firebaseInitialized) {
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      userId = decodedToken.uid;
+    } else {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+        userId = payload.user_id || payload.sub || payload.uid;
+      }
+    }
+
+    if (!userId) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const users = await getUsers();
+    const userIndex = users.findIndex((u) => u.uid === userId);
+
+    if (userIndex === -1) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    users[userIndex].businessInfo = req.body;
+    users[userIndex].updatedAt = new Date().toISOString();
+    await saveUsers(users);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Update business info error:", error);
+    res.status(500).json({ error: "Failed to update business information" });
+  }
+});
+
 module.exports = router;

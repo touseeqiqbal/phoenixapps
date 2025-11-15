@@ -11,6 +11,7 @@ import PublicForm from './pages/PublicForm'
 import TableView from './pages/TableView'
 import Reports from './pages/Reports'
 import Workflows from './pages/Workflows'
+import AccountSettings from './pages/AccountSettings'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -75,6 +76,14 @@ function AppRoutes() {
         element={
           <PrivateRoute>
             <Workflows />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/account-settings"
+        element={
+          <PrivateRoute>
+            <AccountSettings />
           </PrivateRoute>
         }
       />
