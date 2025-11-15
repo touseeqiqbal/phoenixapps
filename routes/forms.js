@@ -1,5 +1,6 @@
 const express = require("express");
 const fs = require("fs").promises;
+const fsSync = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { getDataFilePath } = require("../utils/dataPath");
@@ -54,18 +55,34 @@ async function saveForms(forms) {
   try {
     // Ensure directory exists before writing
     const dir = path.dirname(FORMS_FILE);
+    console.log("Creating directory if needed:", dir);
     await fs.mkdir(dir, { recursive: true });
     
+    // Verify directory is writable by checking if we can access it
+    try {
+      await fs.access(dir, fsSync.constants.W_OK);
+      console.log("Directory is writable:", dir);
+    } catch (accessError) {
+      console.error("Directory is NOT writable:", dir);
+      console.error("Access error:", accessError);
+      // Don't throw here - try to write anyway, the writeFile will fail with a better error
+      console.warn("Warning: Directory access check failed, but attempting write anyway");
+    }
+    
     // Write file
+    console.log("Writing forms file to:", FORMS_FILE);
     await fs.writeFile(FORMS_FILE, JSON.stringify(forms, null, 2), 'utf8');
     console.log("Forms saved successfully, count:", forms.length);
     console.log("Saved to:", FORMS_FILE);
   } catch (error) {
     console.error("Error saving forms:", error);
     console.error("File path:", FORMS_FILE);
+    console.error("Directory:", path.dirname(FORMS_FILE));
     console.error("Error details:", {
       code: error.code,
       message: error.message,
+      errno: error.errno,
+      syscall: error.syscall,
       stack: error.stack
     });
     throw error;
@@ -179,12 +196,21 @@ router.post("/", async (req, res) => {
     console.error("Error code:", error.code);
     console.error("Error message:", error.message);
     console.error("Error stack:", error.stack);
+    
+    // Provide a user-friendly error message
+    let errorMessage = "Failed to create form";
+    if (error.code === 'ENOENT') {
+      errorMessage = "Storage directory not accessible. Please check server configuration.";
+    } else if (error.code === 'EACCES' || error.code === 'EPERM') {
+      errorMessage = "Permission denied. Cannot write to storage directory.";
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
     res.status(500).json({ 
-      error: "Failed to create form", 
+      error: errorMessage,
       details: error.message,
-      code: error.code,
-      path: FORMS_FILE,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      code: error.code
     });
   }
 });

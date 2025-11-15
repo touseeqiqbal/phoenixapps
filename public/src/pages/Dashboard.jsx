@@ -36,8 +36,29 @@ export default function Dashboard() {
       navigate(`/form/${response.data.id}`)
     } catch (error) {
       console.error('Failed to create form:', error)
-      const errorMessage = error.response?.data?.error || error.response?.data?.details || error.message || 'Failed to create form'
-      console.error('Error details:', error.response?.data)
+      console.error('Error response:', error.response)
+      console.error('Error response data:', error.response?.data)
+      
+      // Extract error message from various possible locations
+      let errorMessage = 'Failed to create form';
+      
+      if (error.response?.data) {
+        const data = error.response.data;
+        if (typeof data === 'string') {
+          errorMessage = data;
+        } else if (data.error) {
+          errorMessage = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+        } else if (data.details) {
+          errorMessage = typeof data.details === 'string' ? data.details : JSON.stringify(data.details);
+        } else if (data.message) {
+          errorMessage = typeof data.message === 'string' ? data.message : JSON.stringify(data.message);
+        } else {
+          errorMessage = JSON.stringify(data);
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       alert(`Failed to create form: ${errorMessage}`)
     }
   }
