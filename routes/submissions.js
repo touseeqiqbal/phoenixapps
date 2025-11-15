@@ -4,36 +4,60 @@ const path = require("path");
 const { getDataFilePath } = require("../utils/dataPath");
 
 const router = express.Router();
-const SUBMISSIONS_FILE = getDataFilePath("submissions.json");
-const FORMS_FILE = getDataFilePath("forms.json");
+
+// Lazy file path resolution - resolve at runtime, not module load time
+function getSubmissionsFilePath() {
+  return getDataFilePath("submissions.json");
+}
+
+function getFormsFilePath() {
+  return getDataFilePath("forms.json");
+}
 
 // Initialize submissions file
 async function initSubmissionsFile() {
+  const SUBMISSIONS_FILE = getSubmissionsFilePath();
   try {
     await fs.access(SUBMISSIONS_FILE);
   } catch {
-    await fs.writeFile(SUBMISSIONS_FILE, JSON.stringify([], null, 2));
+    try {
+      const dir = path.dirname(SUBMISSIONS_FILE);
+      await fs.mkdir(dir, { recursive: true });
+      await fs.writeFile(SUBMISSIONS_FILE, JSON.stringify([], null, 2), 'utf8');
+      console.log("Submissions file initialized at:", SUBMISSIONS_FILE);
+    } catch (writeError) {
+      console.error("Error initializing submissions file:", writeError);
+      throw writeError;
+    }
   }
 }
 
 // Get submissions
 async function getSubmissions() {
-  await initSubmissionsFile();
+  const SUBMISSIONS_FILE = getSubmissionsFilePath();
   try {
+    await initSubmissionsFile();
     const data = await fs.readFile(SUBMISSIONS_FILE, "utf8");
     return JSON.parse(data);
   } catch (error) {
     console.error("Error reading submissions file:", error);
+    // Return empty array if file doesn't exist (handles /tmp being cleared)
+    if (error.code === 'ENOENT') {
+      return [];
+    }
     return [];
   }
 }
 
 // Get forms
 async function getForms() {
+  const FORMS_FILE = getFormsFilePath();
   try {
     const data = await fs.readFile(FORMS_FILE, "utf8");
-    return JSON.parse(data);
-  } catch {
+    const forms = JSON.parse(data);
+    return Array.isArray(forms) ? forms : [];
+  } catch (error) {
+    console.error("Error reading forms file:", error);
     return [];
   }
 }
@@ -124,8 +148,11 @@ router.delete("/:id", async (req, res) => {
       return res.status(403).json({ error: "Access denied" });
     }
 
+    const SUBMISSIONS_FILE = getSubmissionsFilePath();
     const updatedSubmissions = submissions.filter((s) => s.id !== req.params.id);
-    await fs.writeFile(SUBMISSIONS_FILE, JSON.stringify(updatedSubmissions, null, 2));
+    const dir = path.dirname(SUBMISSIONS_FILE);
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(SUBMISSIONS_FILE, JSON.stringify(updatedSubmissions, null, 2), 'utf8');
 
     res.json({ message: "Submission deleted successfully" });
   } catch (error) {

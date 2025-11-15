@@ -5,7 +5,11 @@ const path = require("path");
 const { getDataFilePath } = require("../utils/dataPath");
 
 const router = express.Router();
-const USERS_FILE = getDataFilePath("users.json");
+
+// Lazy file path resolution - resolve at runtime, not module load time
+function getUsersFilePath() {
+  return getDataFilePath("users.json");
+}
 
 // Initialize Firebase Admin if credentials are provided
 let firebaseInitialized = false;
@@ -27,23 +31,46 @@ try {
 
 // Initialize users file
 async function initUsersFile() {
+  const USERS_FILE = getUsersFilePath();
   try {
     await fs.access(USERS_FILE);
   } catch {
-    await fs.writeFile(USERS_FILE, JSON.stringify([], null, 2));
+    try {
+      const dir = path.dirname(USERS_FILE);
+      await fs.mkdir(dir, { recursive: true });
+      await fs.writeFile(USERS_FILE, JSON.stringify([], null, 2), 'utf8');
+      console.log("Users file initialized at:", USERS_FILE);
+    } catch (writeError) {
+      console.error("Error initializing users file:", writeError);
+      throw writeError;
+    }
   }
 }
 
 // Get all users
 async function getUsers() {
-  await initUsersFile();
-  const data = await fs.readFile(USERS_FILE, "utf8");
-  return JSON.parse(data);
+  const USERS_FILE = getUsersFilePath();
+  try {
+    await initUsersFile();
+    const data = await fs.readFile(USERS_FILE, "utf8");
+    const users = JSON.parse(data);
+    return Array.isArray(users) ? users : [];
+  } catch (error) {
+    console.error("Error reading users file:", error);
+    // Return empty array if file doesn't exist
+    if (error.code === 'ENOENT') {
+      return [];
+    }
+    return [];
+  }
 }
 
 // Save users
 async function saveUsers(users) {
-  await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
+  const USERS_FILE = getUsersFilePath();
+  const dir = path.dirname(USERS_FILE);
+  await fs.mkdir(dir, { recursive: true });
+  await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
 }
 
 // Verify Firebase token
