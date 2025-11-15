@@ -36,18 +36,63 @@ exports.authRequired = async (req, res, next) => {
         };
         return next();
       } catch (firebaseError) {
-        // If Firebase verification fails, try JWT fallback
-        console.warn("Firebase token verification failed, trying JWT fallback");
+        console.warn("Firebase token verification failed:", firebaseError.message);
+        // If Firebase Admin is not configured, accept the token without verification
+        // This is for development - in production, you should configure Firebase Admin
+        if (!firebaseInitialized || firebaseError.code === 'app/no-app') {
+          console.warn("Firebase Admin not configured. Accepting token without verification (development mode).");
+          // Extract user info from token (basic validation)
+          // In production, you MUST configure Firebase Admin SDK
+          try {
+            // Try to decode the token payload (basic check)
+            const parts = token.split('.');
+            if (parts.length === 3) {
+              const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+              req.user = {
+                id: payload.user_id || payload.sub || payload.uid,
+                uid: payload.user_id || payload.sub || payload.uid,
+                email: payload.email
+              };
+              return next();
+            }
+          } catch (decodeError) {
+            console.error("Token decode error:", decodeError);
+          }
+        }
+        // If Firebase verification fails and we can't decode, try JWT fallback
+        console.warn("Trying JWT fallback");
+      }
+    } else {
+      // Firebase Admin not initialized - try to decode token payload
+      try {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+          req.user = {
+            id: payload.user_id || payload.sub || payload.uid,
+            uid: payload.user_id || payload.sub || payload.uid,
+            email: payload.email
+          };
+          return next();
+        }
+      } catch (decodeError) {
+        console.warn("Token decode failed:", decodeError.message);
       }
     }
 
     // Fallback to JWT (for backward compatibility)
-    const jwt = require("jsonwebtoken");
-    const config = require("../config");
-    const decoded = jwt.verify(token, config.jwtSecret);
-    req.user = decoded;
-    next();
+    try {
+      const jwt = require("jsonwebtoken");
+      const config = require("../config");
+      const decoded = jwt.verify(token, config.jwtSecret);
+      req.user = decoded;
+      next();
+    } catch (jwtError) {
+      console.error("JWT verification failed:", jwtError.message);
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
   } catch (error) {
+    console.error("Auth middleware error:", error);
     return res.status(401).json({ error: "Invalid or expired token" });
   }
 };

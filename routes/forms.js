@@ -67,8 +67,18 @@ router.post("/", async (req, res) => {
   try {
     const { title, fields, settings } = req.body;
 
+    // Check if user is authenticated
+    if (!req.user || (!req.user.uid && !req.user.id)) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+
     const forms = await getForms();
     const userId = req.user.uid || req.user.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: "Invalid user ID" });
+    }
+
     const newForm = {
       id: crypto.randomBytes(16).toString("hex"),
       userId: userId,
@@ -91,7 +101,7 @@ router.post("/", async (req, res) => {
     res.status(201).json(newForm);
   } catch (error) {
     console.error("Create form error:", error);
-    res.status(500).json({ error: "Failed to create form" });
+    res.status(500).json({ error: "Failed to create form", details: error.message });
   }
 });
 

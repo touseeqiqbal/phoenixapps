@@ -22,6 +22,9 @@ export function AuthProvider({ children }) {
         // Get Firebase ID token
         const token = await firebaseUser.getIdToken()
         
+        // Store token in localStorage for API requests
+        localStorage.setItem('firebase_token', token)
+        
         // Store user info
         const userData = {
           uid: firebaseUser.uid,
@@ -40,6 +43,7 @@ export function AuthProvider({ children }) {
         }
       } else {
         setUser(null)
+        localStorage.removeItem('firebase_token')
       }
       setLoading(false)
     })
