@@ -31,6 +31,18 @@ export default function FieldEditor({ field, onUpdate, onClose }) {
         imageUrl: fieldData.imageUrl || '',
         width: fieldData.width || 200,
         height: fieldData.height || 100
+      }),
+      ...(fieldData.type === 'input-table' && {
+        rows: fieldData.rows || 3,
+        columns: fieldData.columns || 3,
+        rowHeaders: fieldData.rowHeaders || [],
+        columnHeaders: fieldData.columnHeaders || []
+      }),
+      ...(fieldData.type === 'product-list' && {
+        products: fieldData.products || [
+          { id: '1', name: 'Product 1', price: 10.00 },
+          { id: '2', name: 'Product 2', price: 20.00 }
+        ]
       })
     }
   }
@@ -275,6 +287,154 @@ export default function FieldEditor({ field, onUpdate, onClose }) {
                 min={50}
                 max={300}
               />
+            </div>
+          </>
+        )}
+
+        {field.type === 'input-table' && (
+          <>
+            <div className="form-group">
+              <label>Number of Rows</label>
+              <input
+                type="number"
+                className="input"
+                value={formData.rows || 3}
+                onChange={(e) => {
+                  const newRows = parseInt(e.target.value) || 1
+                  const currentRowHeaders = formData.rowHeaders || []
+                  const newRowHeaders = Array.from({ length: newRows }, (_, i) => 
+                    currentRowHeaders[i] || `Row ${i + 1}`
+                  )
+                  updateField('rows', newRows)
+                  updateField('rowHeaders', newRowHeaders)
+                }}
+                min={1}
+                max={20}
+              />
+            </div>
+            <div className="form-group">
+              <label>Number of Columns</label>
+              <input
+                type="number"
+                className="input"
+                value={formData.columns || 3}
+                onChange={(e) => {
+                  const newCols = parseInt(e.target.value) || 1
+                  const currentColHeaders = formData.columnHeaders || []
+                  const newColHeaders = Array.from({ length: newCols }, (_, i) => 
+                    currentColHeaders[i] || `Column ${i + 1}`
+                  )
+                  updateField('columns', newCols)
+                  updateField('columnHeaders', newColHeaders)
+                }}
+                min={1}
+                max={10}
+              />
+            </div>
+            <div className="form-group">
+              <label>Row Headers</label>
+              <div className="options-list">
+                {(formData.rowHeaders || []).map((header, idx) => (
+                  <div key={idx} className="option-item">
+                    <input
+                      type="text"
+                      className="input"
+                      value={header}
+                      onChange={(e) => {
+                        const newHeaders = [...(formData.rowHeaders || [])]
+                        newHeaders[idx] = e.target.value
+                        updateField('rowHeaders', newHeaders)
+                      }}
+                      placeholder={`Row ${idx + 1}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Column Headers</label>
+              <div className="options-list">
+                {(formData.columnHeaders || []).map((header, idx) => (
+                  <div key={idx} className="option-item">
+                    <input
+                      type="text"
+                      className="input"
+                      value={header}
+                      onChange={(e) => {
+                        const newHeaders = [...(formData.columnHeaders || [])]
+                        newHeaders[idx] = e.target.value
+                        updateField('columnHeaders', newHeaders)
+                      }}
+                      placeholder={`Column ${idx + 1}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {field.type === 'product-list' && (
+          <>
+            <div className="form-group">
+              <label>Products</label>
+              <div className="options-list">
+                {(formData.products || []).map((product, idx) => (
+                  <div key={product.id || idx} className="option-item">
+                    <input
+                      type="text"
+                      className="input"
+                      value={product.name || ''}
+                      onChange={(e) => {
+                        const newProducts = [...(formData.products || [])]
+                        newProducts[idx] = { ...newProducts[idx], name: e.target.value }
+                        updateField('products', newProducts)
+                      }}
+                      placeholder="Product name"
+                      style={{ marginBottom: '5px' }}
+                    />
+                    <div style={{ display: 'flex', gap: '5px' }}>
+                      <input
+                        type="number"
+                        className="input"
+                        value={product.price || 0}
+                        onChange={(e) => {
+                          const newProducts = [...(formData.products || [])]
+                          newProducts[idx] = { ...newProducts[idx], price: parseFloat(e.target.value) || 0 }
+                          updateField('products', newProducts)
+                        }}
+                        placeholder="Price"
+                        step="0.01"
+                        min="0"
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => {
+                          const newProducts = (formData.products || []).filter((_, i) => i !== idx)
+                          updateField('products', newProducts)
+                        }}
+                        title="Remove product"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button 
+                className="btn btn-secondary btn-sm" 
+                onClick={() => {
+                  const newProducts = [...(formData.products || []), {
+                    id: Date.now().toString(),
+                    name: `Product ${(formData.products || []).length + 1}`,
+                    price: 0
+                  }]
+                  updateField('products', newProducts)
+                }}
+              >
+                + Add Product
+              </button>
             </div>
           </>
         )}

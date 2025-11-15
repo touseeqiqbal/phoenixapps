@@ -71,7 +71,10 @@ export default function Dashboard() {
       <header className="dashboard-header">
         <div className="container">
           <div className="header-content">
-            <h1>My Forms</h1>
+            <div className="dashboard-brand">
+              <h1 className="brand-title">Phoenix Form Builder</h1>
+              <span className="brand-subtitle">My Forms</span>
+            </div>
             <div className="header-actions">
               <span className="user-name">{user?.name || user?.email}</span>
               <button className="btn btn-secondary" onClick={logout}>

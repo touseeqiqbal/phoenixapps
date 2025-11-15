@@ -16,6 +16,27 @@
   align-items: center;
 }
 
+.dashboard-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.brand-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #4f46e5;
+  margin: 0;
+  padding: 0;
+  line-height: 1.2;
+}
+
+.brand-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 400;
+}
+
 .header-content h1 {
   font-size: 24px;
   color: #1f2937;
