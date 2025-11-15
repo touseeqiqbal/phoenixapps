@@ -67,7 +67,7 @@ const FIELD_CATEGORIES = [
   }
 ]
 
-function DraggableField({ fieldType, label, Icon }) {
+function DraggableField({ fieldType, label, Icon, onAddField }) {
   const [{ isDragging }, drag] = useDrag({
     type: 'field',
     item: { fieldType },
@@ -76,10 +76,19 @@ function DraggableField({ fieldType, label, Icon }) {
     }),
   })
 
+  const handleClick = (e) => {
+    e.stopPropagation()
+    if (onAddField) {
+      onAddField(fieldType)
+    }
+  }
+
   return (
     <div
       ref={drag}
       className={`field-palette-item ${isDragging ? 'dragging' : ''}`}
+      onClick={handleClick}
+      style={{ cursor: 'pointer' }}
     >
       <Icon size={18} />
       <span>{label}</span>
@@ -121,9 +130,13 @@ export default function FieldPalette({ onAddField }) {
             {expandedCategories[category.name] && (
               <div className="field-palette-list">
                 {category.fields.map(({ type, label, icon: Icon }) => (
-                  <div key={type} onClick={() => onAddField(type)}>
-                    <DraggableField fieldType={type} label={label} Icon={Icon} />
-                  </div>
+                  <DraggableField 
+                    key={type} 
+                    fieldType={type} 
+                    label={label} 
+                    Icon={Icon}
+                    onAddField={onAddField}
+                  />
                 ))}
               </div>
             )}
