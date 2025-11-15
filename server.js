@@ -19,6 +19,12 @@ app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Add request logging for debugging
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`);
+  next();
+});
+
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
@@ -74,6 +80,16 @@ app.use((req, res, next) => {
   
   // Fallback for development
   return res.status(404).send("File not found");
+});
+
+// Error handling middleware (must be last)
+app.use((err, req, res, next) => {
+  console.error("Express error:", err);
+  console.error("Error stack:", err.stack);
+  res.status(500).json({ 
+    error: "Internal server error", 
+    message: err.message 
+  });
 });
 
 // Only start server if not in Vercel environment

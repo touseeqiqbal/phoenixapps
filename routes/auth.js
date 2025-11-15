@@ -57,6 +57,57 @@ router.post("/verify-firebase-token", async (req, res) => {
     if (!firebaseInitialized) {
       // Fallback: accept token without verification (for development)
       console.warn("Firebase Admin not initialized. Accepting token without verification.");
+      
+      // Try to decode token to get user info
+      try {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+          const userId = payload.user_id || payload.sub || payload.uid;
+          const email = payload.email;
+          
+          if (userId) {
+            // Get or create user in our database
+            const users = await getUsers();
+            let user = users.find((u) => u.uid === userId);
+
+            if (!user) {
+              // Create new user
+              user = {
+                id: userId,
+                uid: userId,
+                email: email,
+                name: payload.name || email?.split("@")[0] || "User",
+                photoURL: payload.picture,
+                createdAt: new Date().toISOString(),
+                provider: payload.firebase?.sign_in_provider || "unknown"
+              };
+              users.push(user);
+              await saveUsers(users);
+            } else {
+              // Update existing user info
+              user.email = email || user.email;
+              user.name = payload.name || user.name;
+              user.photoURL = payload.picture || user.photoURL;
+              await saveUsers(users);
+            }
+
+            return res.json({
+              success: true,
+              user: {
+                id: user.id,
+                uid: user.uid,
+                email: user.email,
+                name: user.name,
+                photoURL: user.photoURL
+              }
+            });
+          }
+        }
+      } catch (decodeError) {
+        console.error("Token decode error:", decodeError);
+      }
+      
       return res.json({ 
         success: true, 
         message: "Token accepted (Firebase not configured)" 
@@ -103,7 +154,11 @@ router.post("/verify-firebase-token", async (req, res) => {
     });
   } catch (error) {
     console.error("Token verification error:", error);
-    res.status(401).json({ error: "Invalid token" });
+    console.error("Error stack:", error.stack);
+    res.status(500).json({ 
+      error: "Token verification failed", 
+      message: error.message 
+    });
   }
 });
 
