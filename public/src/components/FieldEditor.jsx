@@ -4,26 +4,52 @@ import ImageUpload from './ImageUpload'
 import '../styles/FieldEditor.css'
 
 export default function FieldEditor({ field, onUpdate, onClose }) {
-  const needsOptions = ['dropdown', 'radio', 'checkbox', 'single-choice', 'multiple-choice'].includes(field.type)
+  if (!field) {
+    return null
+  }
   
-  const [formData, setFormData] = useState({
-    label: field.label || '',
-    placeholder: field.placeholder || '',
-    required: field.required || false,
-    description: field.description || '',
-    options: needsOptions ? (field.options && field.options.length > 0 ? [...field.options] : ['Option 1', 'Option 2']) : [],
-    ...(field.type === 'number' && { min: field.min, max: field.max }),
-    ...(field.type === 'rating' && { max: field.max || 5 }),
-    ...(field.type === 'file' && { 
-      accept: field.accept || '*',
-      multiple: field.multiple || false 
-    }),
-    ...(field.type === 'textarea' && { rows: field.rows || 4 })
-  })
+  const initializeFormData = (fieldData) => {
+    const needsOptions = ['dropdown', 'radio', 'checkbox', 'single-choice', 'multiple-choice'].includes(fieldData.type)
+    
+    return {
+      label: fieldData.label || '',
+      placeholder: fieldData.placeholder || '',
+      required: fieldData.required || false,
+      description: fieldData.description || '',
+      options: needsOptions ? (fieldData.options && fieldData.options.length > 0 ? [...fieldData.options] : ['Option 1', 'Option 2']) : [],
+      ...(fieldData.type === 'number' && { min: fieldData.min, max: fieldData.max }),
+      ...(fieldData.type === 'rating' && { max: fieldData.max || 5 }),
+      ...(fieldData.type === 'star-rating' && { max: fieldData.max || 5 }),
+      ...(fieldData.type === 'scale-rating' && { max: fieldData.max || 5 }),
+      ...(fieldData.type === 'file' && { 
+        accept: fieldData.accept || '*',
+        multiple: fieldData.multiple || false 
+      }),
+      ...(fieldData.type === 'textarea' && { rows: fieldData.rows || 4 }),
+      ...(fieldData.type === 'long-text' && { rows: fieldData.rows || 4 }),
+      ...(fieldData.type === 'logo' && {
+        imageUrl: fieldData.imageUrl || '',
+        width: fieldData.width || 200,
+        height: fieldData.height || 100
+      })
+    }
+  }
 
+  const [formData, setFormData] = useState(() => initializeFormData(field))
+
+  // Update formData when field changes (when a different field is selected)
   useEffect(() => {
-    onUpdate(formData)
-  }, [formData, onUpdate])
+    if (field) {
+      setFormData(initializeFormData(field))
+    }
+  }, [field.id, field.type]) // Update when field ID or type changes
+
+  // Call onUpdate when formData changes
+  useEffect(() => {
+    if (field && formData) {
+      onUpdate(formData)
+    }
+  }, [formData, onUpdate, field])
 
   const updateField = (key, value) => {
     setFormData(prev => ({ ...prev, [key]: value }))
@@ -52,6 +78,8 @@ export default function FieldEditor({ field, onUpdate, onClose }) {
       options: prev.options.filter((_, idx) => idx !== index)
     }))
   }
+
+  const needsOptions = ['dropdown', 'radio', 'checkbox', 'single-choice', 'multiple-choice'].includes(field.type)
 
   return (
     <div className="field-editor">
@@ -163,7 +191,7 @@ export default function FieldEditor({ field, onUpdate, onClose }) {
           </>
         )}
 
-        {field.type === 'rating' && (
+        {(field.type === 'rating' || field.type === 'star-rating' || field.type === 'scale-rating') && (
           <div className="form-group">
             <label>Max Rating</label>
             <input
@@ -173,6 +201,20 @@ export default function FieldEditor({ field, onUpdate, onClose }) {
               onChange={(e) => updateField('max', parseInt(e.target.value) || 5)}
               min={1}
               max={10}
+            />
+          </div>
+        )}
+
+        {(field.type === 'long-text' || field.type === 'textarea') && (
+          <div className="form-group">
+            <label>Rows</label>
+            <input
+              type="number"
+              className="input"
+              value={formData.rows || 4}
+              onChange={(e) => updateField('rows', parseInt(e.target.value) || 4)}
+              min={1}
+              max={20}
             />
           </div>
         )}
@@ -202,19 +244,6 @@ export default function FieldEditor({ field, onUpdate, onClose }) {
           </>
         )}
 
-        {field.type === 'textarea' && (
-          <div className="form-group">
-            <label>Rows</label>
-            <input
-              type="number"
-              className="input"
-              value={formData.rows || 4}
-              onChange={(e) => updateField('rows', parseInt(e.target.value) || 4)}
-              min={1}
-              max={20}
-            />
-          </div>
-        )}
 
         {field.type === 'logo' && (
           <>
