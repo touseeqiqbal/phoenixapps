@@ -11,8 +11,26 @@ const FORMS_FILE = getDataFilePath("forms.json");
 async function initFormsFile() {
   try {
     await fs.access(FORMS_FILE);
-  } catch {
-    await fs.writeFile(FORMS_FILE, JSON.stringify([], null, 2));
+  } catch (error) {
+      // File doesn't exist, create it
+    try {
+      // Ensure directory exists
+      const dir = path.dirname(FORMS_FILE);
+      await fs.mkdir(dir, { recursive: true });
+      
+      // Create empty forms array file
+      await fs.writeFile(FORMS_FILE, JSON.stringify([], null, 2), 'utf8');
+      console.log("Forms file initialized at:", FORMS_FILE);
+    } catch (writeError) {
+      console.error("Error initializing forms file:", writeError);
+      console.error("File path:", FORMS_FILE);
+      console.error("Error details:", {
+        code: writeError.code,
+        message: writeError.message,
+        stack: writeError.stack
+      });
+      throw writeError;
+    }
   }
 }
 
@@ -26,10 +44,22 @@ async function getForms() {
 // Save forms
 async function saveForms(forms) {
   try {
-    await fs.writeFile(FORMS_FILE, JSON.stringify(forms, null, 2));
+    // Ensure directory exists before writing
+    const dir = path.dirname(FORMS_FILE);
+    await fs.mkdir(dir, { recursive: true });
+    
+    // Write file
+    await fs.writeFile(FORMS_FILE, JSON.stringify(forms, null, 2), 'utf8');
     console.log("Forms saved successfully, count:", forms.length);
+    console.log("Saved to:", FORMS_FILE);
   } catch (error) {
     console.error("Error saving forms:", error);
+    console.error("File path:", FORMS_FILE);
+    console.error("Error details:", {
+      code: error.code,
+      message: error.message,
+      stack: error.stack
+    });
     throw error;
   }
 }
@@ -75,6 +105,7 @@ router.post("/", async (req, res) => {
     console.log("Create form request received");
     console.log("Request user:", req.user);
     console.log("Request body:", req.body);
+    console.log("Forms file path:", FORMS_FILE);
 
     const { title, fields, settings } = req.body;
 
@@ -89,7 +120,6 @@ router.post("/", async (req, res) => {
       return res.status(401).json({ error: "User not authenticated", details: "User ID not found" });
     }
 
-    const forms = await getForms();
     const userId = req.user.uid || req.user.id;
     
     if (!userId) {
@@ -98,6 +128,18 @@ router.post("/", async (req, res) => {
     }
 
     console.log("Creating form for user:", userId);
+
+    // Get existing forms
+    let forms;
+    try {
+      forms = await getForms();
+      console.log("Retrieved forms, count:", forms.length);
+    } catch (getError) {
+      console.error("Error getting forms:", getError);
+      // If file doesn't exist, start with empty array
+      forms = [];
+      console.log("Starting with empty forms array");
+    }
 
     const newForm = {
       id: crypto.randomBytes(16).toString("hex"),
@@ -116,16 +158,23 @@ router.post("/", async (req, res) => {
     };
 
     forms.push(newForm);
+    console.log("Attempting to save forms, new count:", forms.length);
+    
     await saveForms(forms);
 
     console.log("Form created successfully:", newForm.id);
     res.status(201).json(newForm);
   } catch (error) {
     console.error("Create form error:", error);
+    console.error("Error name:", error.name);
+    console.error("Error code:", error.code);
+    console.error("Error message:", error.message);
     console.error("Error stack:", error.stack);
     res.status(500).json({ 
       error: "Failed to create form", 
       details: error.message,
+      code: error.code,
+      path: FORMS_FILE,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
