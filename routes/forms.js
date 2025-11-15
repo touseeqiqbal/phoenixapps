@@ -49,9 +49,20 @@ async function initFormsFile() {
 // Get all forms
 async function getForms() {
   const FORMS_FILE = getFormsFilePath();
-  await initFormsFile();
-  const data = await fs.readFile(FORMS_FILE, "utf8");
-  return JSON.parse(data);
+  try {
+    await initFormsFile();
+    const data = await fs.readFile(FORMS_FILE, "utf8");
+    return JSON.parse(data);
+  } catch (error) {
+    console.error("Error reading forms file:", error);
+    // If file doesn't exist or can't be read, return empty array
+    // This handles the case where /tmp was cleared (serverless functions)
+    if (error.code === 'ENOENT') {
+      console.log("Forms file doesn't exist, returning empty array");
+      return [];
+    }
+    throw error;
+  }
 }
 
 // Save forms
@@ -157,11 +168,16 @@ router.post("/", async (req, res) => {
     try {
       forms = await getForms();
       console.log("Retrieved forms, count:", forms.length);
+      // Ensure forms is an array
+      if (!Array.isArray(forms)) {
+        console.warn("Forms data is not an array, resetting to empty array");
+        forms = [];
+      }
     } catch (getError) {
       console.error("Error getting forms:", getError);
-      // If file doesn't exist, start with empty array
+      // If file doesn't exist or can't be read, start with empty array
       forms = [];
-      console.log("Starting with empty forms array");
+      console.log("Starting with empty forms array due to error");
     }
 
     const newForm = {
