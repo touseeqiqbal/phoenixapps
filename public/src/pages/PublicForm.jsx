@@ -180,9 +180,10 @@ export default function PublicForm() {
     return <div className="error-message">Form not found</div>
   }
 
-  const formStyle = {
+  // Apply styles to page container
+  const pageStyle = {
     backgroundImage: form.settings?.backgroundImage ? `url(${form.settings.backgroundImage})` : 'none',
-    backgroundColor: form.settings?.backgroundColor || '#ffffff',
+    backgroundColor: form.settings?.backgroundColor || '#f5f5f5',
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundRepeat: 'no-repeat',
@@ -193,9 +194,31 @@ export default function PublicForm() {
     '--secondary-color': form.settings?.secondaryColor || '#6366f1',
     '--border-radius': form.settings?.borderRadius || '8px',
     '--field-spacing': form.settings?.fieldSpacing || '16px',
-    maxWidth: form.settings?.formWidth || '800px',
+  }
+
+  // Apply styles to form container
+  const containerStyle = {
+    maxWidth: form.settings?.formWidth === '100%' 
+      ? (form.settings?.maxWidth || '800px')
+      : (form.settings?.formWidth || '800px'),
+    width: form.settings?.formWidth === '100%' ? '100%' : 'auto',
     margin: form.settings?.formAlignment === 'center' ? '0 auto' : 
             form.settings?.formAlignment === 'left' ? '0 auto 0 0' : '0 0 0 auto'
+  }
+
+  // Apply styles to form card
+  const cardStyle = {
+    backgroundColor: form.settings?.backgroundColor || '#ffffff',
+    borderRadius: form.settings?.borderRadius || '12px',
+  }
+
+  // Button style classes
+  const getButtonClass = (type = 'primary') => {
+    const baseClass = `btn btn-${type}`
+    const style = form.settings?.buttonStyle || 'rounded'
+    if (style === 'pill') return `${baseClass} btn-pill`
+    if (style === 'square') return `${baseClass} btn-square`
+    return baseClass
   }
 
   const pageFields = getFieldsForPage(currentPage)
@@ -203,9 +226,14 @@ export default function PublicForm() {
   const isFirstPage = currentPage === 0
 
   return (
-    <div className="public-form-page" style={formStyle}>
-      <div className="public-form-container">
-        <div className="public-form-card">
+    <>
+      {/* Inject custom CSS */}
+      {form.settings?.customCSS && (
+        <style dangerouslySetInnerHTML={{ __html: form.settings.customCSS }} />
+      )}
+      <div className="public-form-page" style={pageStyle}>
+        <div className="public-form-container" style={containerStyle}>
+          <div className="public-form-card" style={cardStyle}>
           {form.settings?.logo && (
             <div className="form-logo-header">
               <img src={form.settings.logo} alt="Logo" className="form-header-logo" />
@@ -219,7 +247,10 @@ export default function PublicForm() {
               <div className="progress-bar">
                 <div 
                   className="progress-fill" 
-                  style={{ width: `${getProgress()}%` }}
+                  style={{ 
+                    width: `${getProgress()}%`,
+                    backgroundColor: form.settings?.primaryColor || '#4f46e5'
+                  }}
                 />
               </div>
               <div className="progress-text">
@@ -235,7 +266,7 @@ export default function PublicForm() {
               <p>{form.settings?.confirmationMessage || 'Your submission has been received.'}</p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="public-form" style={formStyle}>
+            <form onSubmit={handleSubmit} className="public-form">
               {pageFields.map(field => (
                 <FieldRenderer
                   key={field.id}
@@ -249,8 +280,12 @@ export default function PublicForm() {
                 {!isFirstPage && (
                   <button 
                     type="button"
-                    className="btn btn-secondary"
+                    className={getButtonClass('secondary')}
                     onClick={prevPage}
+                    style={{ 
+                      backgroundColor: form.settings?.secondaryColor || '#6366f1',
+                      borderRadius: form.settings?.borderRadius || '8px'
+                    }}
                   >
                     <ChevronLeft size={18} />
                     Previous
@@ -259,8 +294,12 @@ export default function PublicForm() {
                 {!isLastPage ? (
                   <button 
                     type="button"
-                    className="btn btn-primary"
+                    className={getButtonClass('primary')}
                     onClick={nextPage}
+                    style={{ 
+                      backgroundColor: form.settings?.primaryColor || '#4f46e5',
+                      borderRadius: form.settings?.borderRadius || '8px'
+                    }}
                   >
                     Next
                     <ChevronRight size={18} />
@@ -270,8 +309,12 @@ export default function PublicForm() {
                     {form.settings?.showPreviewBeforeSubmit && !showPreview && (
                       <button 
                         type="button"
-                        className="btn btn-secondary"
+                        className={getButtonClass('secondary')}
                         onClick={() => setShowPreview(true)}
+                        style={{ 
+                          backgroundColor: form.settings?.secondaryColor || '#6366f1',
+                          borderRadius: form.settings?.borderRadius || '8px'
+                        }}
                       >
                         <Eye size={18} />
                         Preview
@@ -279,8 +322,12 @@ export default function PublicForm() {
                     )}
                     <button 
                       type="submit" 
-                      className="btn btn-primary btn-large"
+                      className={`${getButtonClass('primary')} btn-large`}
                       disabled={submitting}
+                      style={{ 
+                        backgroundColor: form.settings?.primaryColor || '#4f46e5',
+                        borderRadius: form.settings?.borderRadius || '8px'
+                      }}
                     >
                       {submitting ? 'Submitting...' : showPreview ? 'Confirm Submit' : 'Submit'}
                     </button>
@@ -290,8 +337,12 @@ export default function PublicForm() {
                   <>
                     <button 
                       type="button"
-                      className="btn btn-secondary"
+                      className={getButtonClass('secondary')}
                       onClick={downloadPDF}
+                      style={{ 
+                        backgroundColor: form.settings?.secondaryColor || '#6366f1',
+                        borderRadius: form.settings?.borderRadius || '8px'
+                      }}
                     >
                       <Download size={18} />
                       Download PDF
@@ -299,8 +350,12 @@ export default function PublicForm() {
                     {showPreview && (
                       <button 
                         type="button"
-                        className="btn btn-secondary"
+                        className={getButtonClass('secondary')}
                         onClick={() => setShowPreview(false)}
+                        style={{ 
+                          backgroundColor: form.settings?.secondaryColor || '#6366f1',
+                          borderRadius: form.settings?.borderRadius || '8px'
+                        }}
                       >
                         <X size={18} />
                         Edit
@@ -335,8 +390,9 @@ export default function PublicForm() {
               )}
             </form>
           )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }

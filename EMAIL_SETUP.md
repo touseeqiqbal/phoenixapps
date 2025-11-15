@@ -1,63 +1,15 @@
-# Email Notification Setup Guide
+# Email Configuration Guide - Phoenix Form Builder
 
-## Overview
+This guide will help you set up email notifications for form submissions.
 
-Phoenix Form Builder supports email notifications for form submissions. You can:
-- Notify the form owner when a form is submitted
-- Send confirmation emails to form submitters
+## Quick Setup
 
-## Configuration
+### Step 1: Create Environment Variables
 
-### Option 1: Gmail (Recommended for Testing)
-
-1. **Enable 2-Factor Authentication** on your Gmail account
-2. **Generate an App Password**:
-   - Go to Google Account → Security → 2-Step Verification → App passwords
-   - Generate a new app password for "Mail"
-   - Copy the 16-character password
-
-3. **Set Environment Variables**:
-   ```bash
-   export SMTP_HOST=smtp.gmail.com
-   export SMTP_PORT=587
-   export SMTP_SECURE=false
-   export SMTP_USER=your-email@gmail.com
-   export SMTP_PASSWORD=your-16-char-app-password
-   export SMTP_FROM=your-email@gmail.com
-   ```
-
-### Option 2: Other Email Services
-
-#### Outlook/Office 365
-```bash
-export SMTP_HOST=smtp.office365.com
-export SMTP_PORT=587
-export SMTP_SECURE=false
-export SMTP_USER=your-email@outlook.com
-export SMTP_PASSWORD=your-password
-```
-
-#### SendGrid
-```bash
-export SMTP_HOST=smtp.sendgrid.net
-export SMTP_PORT=587
-export SMTP_USER=apikey
-export SMTP_PASSWORD=your-sendgrid-api-key
-```
-
-#### Mailgun
-```bash
-export SMTP_HOST=smtp.mailgun.org
-export SMTP_PORT=587
-export SMTP_USER=your-mailgun-username
-export SMTP_PASSWORD=your-mailgun-password
-```
-
-### Option 3: Create .env File
-
-Create a `.env` file in the root directory:
+Create a `.env` file in the root directory of your project (same level as `server.js`):
 
 ```env
+# SMTP Configuration
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
@@ -66,44 +18,173 @@ SMTP_PASSWORD=your-app-password
 SMTP_FROM=your-email@gmail.com
 ```
 
-**Note:** Make sure `.env` is in `.gitignore` to keep credentials secure!
+### Step 2: Get Email Credentials
 
-## Using Email Notifications
+#### For Gmail:
 
-1. **In Form Settings**:
-   - Enable "Email notifications"
-   - Check "Notify form owner" and enter your email
-   - Optionally check "Send confirmation email to submitter"
-   - Select the email field from your form for submitter notifications
+1. **Enable 2-Factor Authentication** on your Google account
+2. **Generate App Password**:
+   - Go to: https://myaccount.google.com/apppasswords
+   - Select "Mail" and "Other (Custom name)"
+   - Enter "Phoenix Form Builder"
+   - Copy the 16-character password
+3. **Use in `.env`**:
+   ```env
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_SECURE=false
+   SMTP_USER=your-email@gmail.com
+   SMTP_PASSWORD=your-16-char-app-password
+   SMTP_FROM=your-email@gmail.com
+   ```
 
-2. **When a form is submitted**:
-   - Owner receives an email with all submission data
-   - Submitter receives a confirmation email (if enabled)
+#### For Outlook/Office 365:
 
-## Testing
+```env
+SMTP_HOST=smtp.office365.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@outlook.com
+SMTP_PASSWORD=your-password
+SMTP_FROM=your-email@outlook.com
+```
 
-1. Configure email settings (see above)
-2. Create a form with an email field
-3. Enable email notifications in form settings
-4. Submit a test form
-5. Check both email inboxes
+#### For SendGrid:
+
+1. Sign up at https://sendgrid.com
+2. Create API Key
+3. Use in `.env`:
+   ```env
+   SMTP_HOST=smtp.sendgrid.net
+   SMTP_PORT=587
+   SMTP_SECURE=false
+   SMTP_USER=apikey
+   SMTP_PASSWORD=your-sendgrid-api-key
+   SMTP_FROM=your-verified-email@example.com
+   ```
+
+#### For Mailgun:
+
+1. Sign up at https://mailgun.com
+2. Get SMTP credentials from dashboard
+3. Use in `.env`:
+   ```env
+   SMTP_HOST=smtp.mailgun.org
+   SMTP_PORT=587
+   SMTP_SECURE=false
+   SMTP_USER=your-mailgun-username
+   SMTP_PASSWORD=your-mailgun-password
+   SMTP_FROM=your-verified-email@yourdomain.com
+   ```
+
+### Step 3: Restart Server
+
+After setting up `.env` file:
+
+```bash
+# Stop the server (Ctrl+C)
+# Then restart
+npm run dev
+```
+
+You should see: `Email service initialized` in the console.
+
+### Step 4: Configure Form Email Settings
+
+1. Open your form in Form Builder
+2. Click **Settings** button
+3. Scroll to **Email Notifications** section
+4. Enable email notifications
+5. Configure:
+   - **Notify Owner**: Check to receive emails when form is submitted
+   - **Owner Email**: Your email address
+   - **Notify Submitter**: Check to send confirmation to submitter
+   - **Email Field**: Select which email field from your form to use for submitter notifications
+6. Click **Save Settings**
+
+## Testing Email
+
+1. Create a test form with an email field
+2. Enable email notifications in form settings
+3. Share the form and submit it
+4. Check your email inbox (and spam folder)
 
 ## Troubleshooting
 
-### Emails not sending
-- Check SMTP credentials are correct
-- Verify firewall/network allows SMTP connections
-- Check server logs for error messages
-- For Gmail: Make sure you're using an App Password, not your regular password
-
 ### "Email service not configured" warning
-- This is normal if SMTP credentials aren't set
-- Form submissions will still work, just no emails will be sent
-- Configure SMTP to enable email notifications
+
+- Check that `.env` file exists in project root
+- Verify all SMTP variables are set correctly
+- Restart the server after adding/changing `.env` file
+
+### Emails not sending
+
+1. **Check server logs** for error messages
+2. **Verify SMTP credentials** are correct
+3. **Check spam folder** - emails might be filtered
+4. **Test SMTP connection**:
+   ```bash
+   # You can test with a simple Node script
+   node -e "const nodemailer = require('nodemailer'); const transporter = nodemailer.createTransport({host: process.env.SMTP_HOST, port: process.env.SMTP_PORT, secure: false, auth: {user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD}}); transporter.verify().then(() => console.log('SMTP OK')).catch(console.error);"
+   ```
+
+### Gmail "Less secure app" error
+
+- Use **App Password** instead of regular password
+- Make sure 2FA is enabled on your Google account
+
+### For Vercel Deployment
+
+1. Go to Vercel Dashboard → Your Project → Settings → Environment Variables
+2. Add all SMTP variables:
+   - `SMTP_HOST`
+   - `SMTP_PORT`
+   - `SMTP_SECURE`
+   - `SMTP_USER`
+   - `SMTP_PASSWORD`
+   - `SMTP_FROM`
+3. Redeploy your application
+
+## Email Templates
+
+The system sends two types of emails:
+
+1. **Owner Notification**: Sent to form owner when someone submits the form
+   - Includes all submission data
+   - Formatted HTML email
+
+2. **Submitter Confirmation**: Sent to the person who submitted the form
+   - Confirmation message
+   - Summary of their submission
 
 ## Security Notes
 
-- Never commit `.env` files with real credentials
-- Use App Passwords instead of main account passwords
-- Consider using a dedicated email service account
-- For production, use environment variables or a secrets manager
+- **Never commit `.env` file** to version control
+- Use **App Passwords** for Gmail (not your main password)
+- Keep SMTP credentials secure
+- Consider using environment-specific credentials for production
+
+## Example `.env` File
+
+```env
+# Email Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=myformbuilder@gmail.com
+SMTP_PASSWORD=abcd efgh ijkl mnop
+SMTP_FROM=myformbuilder@gmail.com
+
+# Firebase (if not already set)
+VITE_FIREBASE_API_KEY=your-key
+VITE_FIREBASE_AUTH_DOMAIN=your-domain
+# ... other Firebase vars
+```
+
+## Support
+
+If you continue to have issues:
+1. Check server console for error messages
+2. Verify SMTP settings match your email provider's requirements
+3. Test with a simple email client first
+4. Check firewall/network restrictions

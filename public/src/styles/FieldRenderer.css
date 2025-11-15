@@ -1,11 +1,49 @@
+/* Field Renderer Base Styles */
+.field-renderer {
+  margin-bottom: var(--field-spacing, 20px);
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.field-input,
+.field-textarea,
+.field-select {
+  width: 100%;
+  border-radius: var(--border-radius, 8px);
+  border: 1px solid var(--border-color, #d1d5db);
+  padding: 10px 12px;
+  font-size: inherit;
+  font-family: inherit;
+  color: inherit;
+  transition: all 0.2s;
+  background-color: white;
+}
+
+.field-input:focus,
+.field-textarea:focus,
+.field-select:focus {
+  outline: none;
+  border-color: var(--primary-color, #4f46e5);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
 /* Additional styles for new field types */
 
 .field-paragraph {
   padding: 15px;
   background: #f9fafb;
-  border-radius: 6px;
-  color: #374151;
+  border-radius: var(--border-radius, 6px);
+  color: inherit;
   line-height: 1.6;
+  font-family: inherit;
+  font-size: inherit;
 }
 
 .field-heading {

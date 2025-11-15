@@ -34,6 +34,16 @@
   border-radius: 12px;
   padding: 40px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  width: 100%;
+}
+
+.public-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--field-spacing, 25px);
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
 }
 
 .form-title {
@@ -185,7 +195,7 @@
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(to right, #4f46e5, #6366f1);
+  background: linear-gradient(to right, var(--primary-color, #4f46e5), var(--secondary-color, #6366f1));
   border-radius: 4px;
   transition: width 0.3s;
 }
