@@ -4,7 +4,9 @@ const fs = require("fs").promises;
 const path = require("path");
 
 const router = express.Router();
-const USERS_FILE = path.join(__dirname, "../data/users.json");
+// Use /tmp on Vercel (serverless functions have read-only filesystem except /tmp)
+const dataDir = process.env.VERCEL ? path.join("/tmp", "data") : path.join(__dirname, "../data");
+const USERS_FILE = path.join(dataDir, "users.json");
 
 // Initialize Firebase Admin if credentials are provided
 let firebaseInitialized = false;
@@ -27,6 +29,8 @@ try {
 // Initialize users file
 async function initUsersFile() {
   try {
+    // Ensure data directory exists
+    await fs.mkdir(dataDir, { recursive: true });
     await fs.access(USERS_FILE);
   } catch {
     await fs.writeFile(USERS_FILE, JSON.stringify([], null, 2));

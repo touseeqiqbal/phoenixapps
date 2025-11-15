@@ -3,12 +3,16 @@ const fs = require("fs").promises;
 const path = require("path");
 
 const router = express.Router();
-const SUBMISSIONS_FILE = path.join(__dirname, "../data/submissions.json");
-const FORMS_FILE = path.join(__dirname, "../data/forms.json");
+// Use /tmp on Vercel (serverless functions have read-only filesystem except /tmp)
+const dataDir = process.env.VERCEL ? path.join("/tmp", "data") : path.join(__dirname, "../data");
+const SUBMISSIONS_FILE = path.join(dataDir, "submissions.json");
+const FORMS_FILE = path.join(dataDir, "forms.json");
 
 // Initialize submissions file
 async function initSubmissionsFile() {
   try {
+    // Ensure data directory exists
+    await fs.mkdir(dataDir, { recursive: true });
     await fs.access(SUBMISSIONS_FILE);
   } catch {
     await fs.writeFile(SUBMISSIONS_FILE, JSON.stringify([], null, 2));

@@ -4,11 +4,17 @@ const path = require("path");
 const crypto = require("crypto");
 
 const router = express.Router();
-const FORMS_FILE = path.join(__dirname, "../data/forms.json");
+// Use /tmp on Vercel (serverless functions have read-only filesystem except /tmp)
+// Note: /tmp data is ephemeral and won't persist between deployments
+// For production, consider using a database (MongoDB, PostgreSQL, Vercel KV, etc.)
+const dataDir = process.env.VERCEL ? path.join("/tmp", "data") : path.join(__dirname, "../data");
+const FORMS_FILE = path.join(dataDir, "forms.json");
 
 // Initialize forms file
 async function initFormsFile() {
   try {
+    // Ensure data directory exists
+    await fs.mkdir(dataDir, { recursive: true });
     await fs.access(FORMS_FILE);
   } catch {
     await fs.writeFile(FORMS_FILE, JSON.stringify([], null, 2));
@@ -191,11 +197,12 @@ router.delete("/:id", async (req, res) => {
 });
 
 // Team Collaboration Routes
-const MEMBERS_FILE = path.join(__dirname, "../data/members.json");
-const INVITES_FILE = path.join(__dirname, "../data/invites.json");
+const MEMBERS_FILE = path.join(dataDir, "members.json");
+const INVITES_FILE = path.join(dataDir, "invites.json");
 
 async function initMembersFile() {
   try {
+    await fs.mkdir(dataDir, { recursive: true });
     await fs.access(MEMBERS_FILE);
   } catch {
     await fs.writeFile(MEMBERS_FILE, JSON.stringify({}, null, 2));
@@ -204,6 +211,7 @@ async function initMembersFile() {
 
 async function initInvitesFile() {
   try {
+    await fs.mkdir(dataDir, { recursive: true });
     await fs.access(INVITES_FILE);
   } catch {
     await fs.writeFile(INVITES_FILE, JSON.stringify({}, null, 2));
@@ -228,7 +236,7 @@ router.get("/:id/members", async (req, res) => {
       // Get user info - try to get from users file
       let owner = null;
       try {
-        const usersFile = path.join(__dirname, "../data/users.json");
+        const usersFile = path.join(dataDir, "users.json");
         const usersData = await fs.readFile(usersFile, "utf8");
         const users = JSON.parse(usersData);
         owner = users.find(u => u.uid === form.userId);

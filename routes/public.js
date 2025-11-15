@@ -4,8 +4,10 @@ const path = require("path");
 const { sendSubmissionNotification } = require("../utils/emailService");
 
 const router = express.Router();
-const FORMS_FILE = path.join(__dirname, "../data/forms.json");
-const SUBMISSIONS_FILE = path.join(__dirname, "../data/submissions.json");
+// Use /tmp on Vercel (serverless functions have read-only filesystem except /tmp)
+const dataDir = process.env.VERCEL ? path.join("/tmp", "data") : path.join(__dirname, "../data");
+const FORMS_FILE = path.join(dataDir, "forms.json");
+const SUBMISSIONS_FILE = path.join(dataDir, "submissions.json");
 
 // Get forms
 async function getForms() {
@@ -29,11 +31,13 @@ async function getSubmissions() {
 
 // Save submissions
 async function saveSubmissions(submissions) {
+  await fs.mkdir(dataDir, { recursive: true });
   await fs.writeFile(SUBMISSIONS_FILE, JSON.stringify(submissions, null, 2));
 }
 
 // Save forms
 async function saveForms(forms) {
+  await fs.mkdir(dataDir, { recursive: true });
   await fs.writeFile(FORMS_FILE, JSON.stringify(forms, null, 2));
 }
 
