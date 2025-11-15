@@ -8,7 +8,9 @@ export default function FormCanvas({
   onSelectField,
   onUpdateField,
   onDeleteField,
-  onMoveField
+  onMoveField,
+  currentPage = 0,
+  pages = []
 }) {
   const [{ isOver }, drop] = useDrop({
     accept: 'field',

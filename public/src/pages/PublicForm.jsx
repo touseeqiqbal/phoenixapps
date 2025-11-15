@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import api from '../utils/api'
 import FieldRenderer from '../components/FieldRenderer'
-import { Eye, Download, X } from 'lucide-react'
+import { Eye, Download, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import '../styles/PublicForm.css'
 
 export default function PublicForm() {
@@ -14,6 +14,8 @@ export default function PublicForm() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [pages, setPages] = useState([{ id: '1', name: 'Page 1', order: 0 }])
 
   useEffect(() => {
     fetchForm()
@@ -24,11 +26,57 @@ export default function PublicForm() {
       const response = await api.get(`/public/form/${shareKey}`)
       setForm(response.data)
       setFields(response.data.fields || [])
+      if (response.data.pages && response.data.pages.length > 0) {
+        setPages(response.data.pages)
+      } else {
+        setPages([{ id: '1', name: 'Page 1', order: 0 }])
+      }
     } catch (error) {
       console.error('Failed to fetch form:', error)
       alert('Form not found')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const getFieldsForPage = (pageIndex) => {
+    if (pages.length === 1) return fields
+    
+    let pageBreakCount = 0
+    const pageFields = []
+    
+    for (let i = 0; i < fields.length; i++) {
+      if (fields[i].type === 'page-break') {
+        pageBreakCount++
+        if (pageBreakCount > pageIndex) break
+        continue
+      }
+      if (pageBreakCount === pageIndex) {
+        pageFields.push(fields[i])
+      } else if (pageIndex === 0 && pageBreakCount === 0) {
+        pageFields.push(fields[i])
+      }
+    }
+    
+    return pageFields
+  }
+
+  const getProgress = () => {
+    if (pages.length <= 1) return 100
+    return ((currentPage + 1) / pages.length) * 100
+  }
+
+  const nextPage = () => {
+    if (currentPage < pages.length - 1) {
+      setCurrentPage(currentPage + 1)
+      window.scrollTo(0, 0)
+    }
+  }
+
+  const prevPage = () => {
+    if (currentPage > 0) {
+      setCurrentPage(currentPage - 1)
+      window.scrollTo(0, 0)
     }
   }
 
@@ -137,8 +185,22 @@ export default function PublicForm() {
     backgroundColor: form.settings?.backgroundColor || '#ffffff',
     backgroundSize: 'cover',
     backgroundPosition: 'center',
-    backgroundRepeat: 'no-repeat'
+    backgroundRepeat: 'no-repeat',
+    fontFamily: form.settings?.fontFamily || 'Inter, sans-serif',
+    fontSize: form.settings?.fontSize || '16px',
+    color: form.settings?.textColor || '#1f2937',
+    '--primary-color': form.settings?.primaryColor || '#4f46e5',
+    '--secondary-color': form.settings?.secondaryColor || '#6366f1',
+    '--border-radius': form.settings?.borderRadius || '8px',
+    '--field-spacing': form.settings?.fieldSpacing || '16px',
+    maxWidth: form.settings?.formWidth || '800px',
+    margin: form.settings?.formAlignment === 'center' ? '0 auto' : 
+            form.settings?.formAlignment === 'left' ? '0 auto 0 0' : '0 0 0 auto'
   }
+
+  const pageFields = getFieldsForPage(currentPage)
+  const isLastPage = currentPage === pages.length - 1
+  const isFirstPage = currentPage === 0
 
   return (
     <div className="public-form-page" style={formStyle}>
@@ -151,6 +213,21 @@ export default function PublicForm() {
           )}
           <h1 className="form-title">{form.title}</h1>
           
+          {/* Progress Bar */}
+          {form.settings?.showProgressBar && pages.length > 1 && (
+            <div className="form-progress">
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill" 
+                  style={{ width: `${getProgress()}%` }}
+                />
+              </div>
+              <div className="progress-text">
+                Page {currentPage + 1} of {pages.length}
+              </div>
+            </div>
+          )}
+          
           {submitted ? (
             <div className="submission-success">
               <div className="success-icon">✓</div>
@@ -158,8 +235,8 @@ export default function PublicForm() {
               <p>{form.settings?.confirmationMessage || 'Your submission has been received.'}</p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="public-form">
-              {fields.map(field => (
+            <form onSubmit={handleSubmit} className="public-form" style={formStyle}>
+              {pageFields.map(field => (
                 <FieldRenderer
                   key={field.id}
                   field={field}
@@ -169,44 +246,71 @@ export default function PublicForm() {
               ))}
               
               <div className="form-actions">
-                <button 
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={downloadPDF}
-                >
-                  <Download size={18} />
-                  Download PDF
-                </button>
-                {form.settings?.showPreviewBeforeSubmit && !showPreview && (
+                {!isFirstPage && (
                   <button 
                     type="button"
                     className="btn btn-secondary"
-                    onClick={() => setShowPreview(true)}
+                    onClick={prevPage}
                   >
-                    <Eye size={18} />
-                    Preview
+                    <ChevronLeft size={18} />
+                    Previous
                   </button>
                 )}
-                <button 
-                  type="submit" 
-                  className="btn btn-primary btn-large"
-                  disabled={submitting}
-                >
-                  {submitting ? 'Submitting...' : showPreview ? 'Confirm Submit' : 'Submit'}
-                </button>
-                {showPreview && (
+                {!isLastPage ? (
                   <button 
                     type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setShowPreview(false)}
+                    className="btn btn-primary"
+                    onClick={nextPage}
                   >
-                    <X size={18} />
-                    Edit
+                    Next
+                    <ChevronRight size={18} />
                   </button>
+                ) : (
+                  <>
+                    {form.settings?.showPreviewBeforeSubmit && !showPreview && (
+                      <button 
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setShowPreview(true)}
+                      >
+                        <Eye size={18} />
+                        Preview
+                      </button>
+                    )}
+                    <button 
+                      type="submit" 
+                      className="btn btn-primary btn-large"
+                      disabled={submitting}
+                    >
+                      {submitting ? 'Submitting...' : showPreview ? 'Confirm Submit' : 'Submit'}
+                    </button>
+                  </>
+                )}
+                {isLastPage && (
+                  <>
+                    <button 
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={downloadPDF}
+                    >
+                      <Download size={18} />
+                      Download PDF
+                    </button>
+                    {showPreview && (
+                      <button 
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setShowPreview(false)}
+                      >
+                        <X size={18} />
+                        Edit
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
               
-              {showPreview && (
+              {showPreview && isLastPage && (
                 <div className="form-preview-section">
                   <h3>Preview Your Submission</h3>
                   <div className="preview-content">

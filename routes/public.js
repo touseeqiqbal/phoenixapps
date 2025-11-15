@@ -32,6 +32,11 @@ async function saveSubmissions(submissions) {
   await fs.writeFile(SUBMISSIONS_FILE, JSON.stringify(submissions, null, 2));
 }
 
+// Save forms
+async function saveForms(forms) {
+  await fs.writeFile(FORMS_FILE, JSON.stringify(forms, null, 2));
+}
+
 // Get public form by share key
 router.get("/form/:shareKey", async (req, res) => {
   try {
@@ -42,12 +47,21 @@ router.get("/form/:shareKey", async (req, res) => {
       return res.status(404).json({ error: "Form not found" });
     }
 
+    // Increment view count
+    const formIndex = forms.findIndex((f) => f.shareKey === req.params.shareKey);
+    if (formIndex !== -1) {
+      forms[formIndex].views = (forms[formIndex].views || 0) + 1;
+      forms[formIndex].lastViewedAt = new Date().toISOString();
+      await saveForms(forms);
+    }
+
     // Return form without sensitive data
     const publicForm = {
       id: form.id,
       title: form.title,
       fields: form.fields,
       settings: form.settings,
+      pages: form.pages || [{ id: '1', name: 'Page 1', order: 0 }],
     };
 
     res.json(publicForm);

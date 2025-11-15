@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../utils/AuthContext'
 import api from '../utils/api'
-import { Plus, FileText, Trash2, ExternalLink, Table, BarChart, Workflow, Settings } from 'lucide-react'
+import { Plus, FileText, Trash2, ExternalLink, Table, BarChart, Workflow, Settings, TrendingUp, Users } from 'lucide-react'
 import '../styles/Dashboard.css'
 
 export default function Dashboard() {
@@ -179,6 +179,26 @@ export default function Dashboard() {
                     }}
                   >
                     Workflows
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      navigate(`/form/${form.id}/analytics`)
+                    }}
+                  >
+                    <TrendingUp size={14} />
+                    Analytics
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      navigate(`/form/${form.id}/team`)
+                    }}
+                  >
+                    <Users size={14} />
+                    Team
                   </button>
                 </div>
               </div>

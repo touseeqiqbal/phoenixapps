@@ -190,4 +190,209 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// Team Collaboration Routes
+const MEMBERS_FILE = path.join(__dirname, "../data/members.json");
+const INVITES_FILE = path.join(__dirname, "../data/invites.json");
+
+async function initMembersFile() {
+  try {
+    await fs.access(MEMBERS_FILE);
+  } catch {
+    await fs.writeFile(MEMBERS_FILE, JSON.stringify({}, null, 2));
+  }
+}
+
+async function initInvitesFile() {
+  try {
+    await fs.access(INVITES_FILE);
+  } catch {
+    await fs.writeFile(INVITES_FILE, JSON.stringify({}, null, 2));
+  }
+}
+
+// Get form members
+router.get("/:id/members", async (req, res) => {
+  try {
+    await initMembersFile();
+    const data = await fs.readFile(MEMBERS_FILE, "utf8");
+    const allMembers = JSON.parse(data);
+    const formMembers = allMembers[req.params.id] || [];
+    
+    // Add owner as first member
+    const forms = await getForms();
+    const form = forms.find(f => f.id === req.params.id);
+    if (form) {
+      const userId = req.user.uid || req.user.id;
+      const isOwner = form.userId === userId;
+      
+      // Get user info - try to get from users file
+      let owner = null;
+      try {
+        const usersFile = path.join(__dirname, "../data/users.json");
+        const usersData = await fs.readFile(usersFile, "utf8");
+        const users = JSON.parse(usersData);
+        owner = users.find(u => u.uid === form.userId);
+      } catch (err) {
+        console.warn("Could not load user data:", err.message);
+      }
+      
+      const ownerMember = {
+        id: form.userId,
+        email: owner?.email || 'unknown',
+        name: owner?.name || 'Owner',
+        role: 'owner',
+        isOwner: true
+      };
+      
+      res.json([ownerMember, ...formMembers.filter(m => m.id !== form.userId)]);
+    } else {
+      res.json(formMembers);
+    }
+  } catch (error) {
+    console.error("Get members error:", error);
+    res.status(500).json({ error: "Failed to fetch members" });
+  }
+});
+
+// Get form invites
+router.get("/:id/invites", async (req, res) => {
+  try {
+    await initInvitesFile();
+    const data = await fs.readFile(INVITES_FILE, "utf8");
+    const allInvites = JSON.parse(data);
+    res.json(allInvites[req.params.id] || []);
+  } catch (error) {
+    console.error("Get invites error:", error);
+    res.status(500).json({ error: "Failed to fetch invites" });
+  }
+});
+
+// Send invite
+router.post("/:id/invites", async (req, res) => {
+  try {
+    const forms = await getForms();
+    const form = forms.find(f => f.id === req.params.id);
+    if (!form) {
+      return res.status(404).json({ error: "Form not found" });
+    }
+
+    const userId = req.user.uid || req.user.id;
+    if (form.userId !== userId) {
+      return res.status(403).json({ error: "Only form owner can invite members" });
+    }
+
+    await initInvitesFile();
+    const data = await fs.readFile(INVITES_FILE, "utf8");
+    const allInvites = JSON.parse(data);
+    
+    if (!allInvites[req.params.id]) {
+      allInvites[req.params.id] = [];
+    }
+
+    const invite = {
+      id: crypto.randomBytes(8).toString("hex"),
+      email: req.body.email,
+      role: req.body.role || 'editor',
+      formId: req.params.id,
+      createdAt: new Date().toISOString()
+    };
+
+    allInvites[req.params.id].push(invite);
+    await fs.writeFile(INVITES_FILE, JSON.stringify(allInvites, null, 2));
+
+    res.json(invite);
+  } catch (error) {
+    console.error("Send invite error:", error);
+    res.status(500).json({ error: "Failed to send invite" });
+  }
+});
+
+// Cancel invite
+router.delete("/:id/invites/:inviteId", async (req, res) => {
+  try {
+    await initInvitesFile();
+    const data = await fs.readFile(INVITES_FILE, "utf8");
+    const allInvites = JSON.parse(data);
+    
+    if (allInvites[req.params.id]) {
+      allInvites[req.params.id] = allInvites[req.params.id].filter(
+        i => i.id !== req.params.inviteId
+      );
+      await fs.writeFile(INVITES_FILE, JSON.stringify(allInvites, null, 2));
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Cancel invite error:", error);
+    res.status(500).json({ error: "Failed to cancel invite" });
+  }
+});
+
+// Update member role
+router.put("/:id/members/:memberId", async (req, res) => {
+  try {
+    const forms = await getForms();
+    const form = forms.find(f => f.id === req.params.id);
+    if (!form) {
+      return res.status(404).json({ error: "Form not found" });
+    }
+
+    const userId = req.user.uid || req.user.id;
+    if (form.userId !== userId) {
+      return res.status(403).json({ error: "Only form owner can update roles" });
+    }
+
+    await initMembersFile();
+    const data = await fs.readFile(MEMBERS_FILE, "utf8");
+    const allMembers = JSON.parse(data);
+    
+    if (!allMembers[req.params.id]) {
+      allMembers[req.params.id] = [];
+    }
+
+    const memberIndex = allMembers[req.params.id].findIndex(m => m.id === req.params.memberId);
+    if (memberIndex !== -1) {
+      allMembers[req.params.id][memberIndex].role = req.body.role;
+      await fs.writeFile(MEMBERS_FILE, JSON.stringify(allMembers, null, 2));
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Update member error:", error);
+    res.status(500).json({ error: "Failed to update member" });
+  }
+});
+
+// Remove member
+router.delete("/:id/members/:memberId", async (req, res) => {
+  try {
+    const forms = await getForms();
+    const form = forms.find(f => f.id === req.params.id);
+    if (!form) {
+      return res.status(404).json({ error: "Form not found" });
+    }
+
+    const userId = req.user.uid || req.user.id;
+    if (form.userId !== userId) {
+      return res.status(403).json({ error: "Only form owner can remove members" });
+    }
+
+    await initMembersFile();
+    const data = await fs.readFile(MEMBERS_FILE, "utf8");
+    const allMembers = JSON.parse(data);
+    
+    if (allMembers[req.params.id]) {
+      allMembers[req.params.id] = allMembers[req.params.id].filter(
+        m => m.id !== req.params.memberId
+      );
+      await fs.writeFile(MEMBERS_FILE, JSON.stringify(allMembers, null, 2));
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Remove member error:", error);
+    res.status(500).json({ error: "Failed to remove member" });
+  }
+});
+
 module.exports = router;

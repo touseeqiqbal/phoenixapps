@@ -7,7 +7,8 @@ import FormPreview from '../components/FormPreview'
 import FormSettings from '../components/FormSettings'
 import ConditionalLogic from '../components/ConditionalLogic'
 import FieldEditor from '../components/FieldEditor'
-import { Save, Eye, ArrowLeft, Share2, Copy, Check, GitBranch } from 'lucide-react'
+import PageManager from '../components/PageManager'
+import { Save, Eye, ArrowLeft, Share2, Copy, Check, GitBranch, FileText } from 'lucide-react'
 import '../styles/FormBuilder.css'
 
 export default function FormBuilder() {
@@ -22,6 +23,8 @@ export default function FormBuilder() {
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [shareLinkCopied, setShareLinkCopied] = useState(false)
+  const [pages, setPages] = useState([{ id: '1', name: 'Page 1', order: 0 }])
+  const [currentPage, setCurrentPage] = useState(0)
 
   useEffect(() => {
     fetchForm()
@@ -32,6 +35,12 @@ export default function FormBuilder() {
       const response = await api.get(`/forms/${id}`)
       setForm(response.data)
       setFields(response.data.fields || [])
+      // Initialize pages if not exists
+      if (response.data.pages && response.data.pages.length > 0) {
+        setPages(response.data.pages)
+      } else {
+        setPages([{ id: '1', name: 'Page 1', order: 0 }])
+      }
     } catch (error) {
       console.error('Failed to fetch form:', error)
       alert('Failed to load form')
@@ -47,6 +56,7 @@ export default function FormBuilder() {
       const response = await api.put(`/forms/${id}`, {
         ...form,
         fields,
+        pages,
         title: form.title
       })
       setForm(response.data)
@@ -56,6 +66,19 @@ export default function FormBuilder() {
       alert('Failed to save form')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handlePageBreak = (fieldId) => {
+    // When page-break is added, create a new page
+    const fieldIndex = fields.findIndex(f => f.id === fieldId)
+    if (fieldIndex !== -1 && fields[fieldIndex].type === 'page-break') {
+      const newPage = {
+        id: Date.now().toString(),
+        name: `Page ${pages.length + 1}`,
+        order: pages.length
+      }
+      setPages([...pages, newPage])
     }
   }
 
@@ -79,6 +102,16 @@ export default function FormBuilder() {
     }
     setFields([...fields, newField])
     setSelectedField(newField)
+    
+    // If page-break is added, create new page
+    if (fieldType === 'page-break') {
+      const newPage = {
+        id: Date.now().toString(),
+        name: `Page ${pages.length + 1}`,
+        order: pages.length
+      }
+      setPages([...pages, newPage])
+    }
   }
 
   const updateField = (fieldId, updates) => {
@@ -317,7 +350,14 @@ export default function FormBuilder() {
       </header>
 
       <div className="builder-content">
-        <FieldPalette onAddField={addField} />
+        <div className="builder-left-panel">
+          <FieldPalette onAddField={addField} />
+          <PageManager 
+            pages={pages} 
+            onUpdatePages={setPages}
+            fields={fields}
+          />
+        </div>
         <FormCanvas
           fields={fields}
           selectedField={selectedField}
@@ -325,6 +365,8 @@ export default function FormBuilder() {
           onUpdateField={updateField}
           onDeleteField={deleteField}
           onMoveField={moveField}
+          currentPage={currentPage}
+          pages={pages}
         />
         
         {selectedField && (

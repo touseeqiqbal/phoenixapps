@@ -70,6 +70,12 @@
   gap: 20px;
 }
 
+.builder-left-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .field-editor-sidebar {
   background: white;
   border-radius: 8px;

@@ -12,6 +12,8 @@ import TableView from './pages/TableView'
 import Reports from './pages/Reports'
 import Workflows from './pages/Workflows'
 import AccountSettings from './pages/AccountSettings'
+import Analytics from './pages/Analytics'
+import TeamCollaboration from './pages/TeamCollaboration'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -76,6 +78,22 @@ function AppRoutes() {
         element={
           <PrivateRoute>
             <Workflows />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/form/:id/analytics"
+        element={
+          <PrivateRoute>
+            <Analytics />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/form/:id/team"
+        element={
+          <PrivateRoute>
+            <TeamCollaboration />
           </PrivateRoute>
         }
       />
