@@ -100,3 +100,24 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.success-message {
+  text-align: center;
+  padding: 20px;
+}
+
+.success-message h2 {
+  margin: 10px 0;
+  color: #1f2937;
+  font-size: 20px;
+}
+
+.success-message p {
+  color: #6b7280;
+  margin: 8px 0;
+  line-height: 1.6;
+}
+
+.success-message strong {
+  color: #1f2937;
+}

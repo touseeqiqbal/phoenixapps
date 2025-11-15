@@ -12,9 +12,15 @@
 1. In Firebase Console, go to **Authentication** → **Get started**
 2. Click **Sign-in method** tab
 3. Enable **Email/Password** provider
+   - Enable "Email link (passwordless sign-in)" if desired (optional)
+   - Make sure "Password" is enabled
 4. Enable **Google** provider
    - Add your project's support email
    - Save the configuration
+5. Configure **Email Templates** (for password reset):
+   - Go to **Authentication** → **Templates**
+   - Customize the "Password reset" email template if desired
+   - The default template will work fine
 
 ## Step 3: Get Firebase Configuration
 
@@ -96,6 +102,23 @@ npm install
 
 ### CORS errors
 - Add your domain to Firebase Console → Authentication → Settings → Authorized domains
+
+### Password Reset Not Working
+- Make sure Email/Password provider is enabled
+- Check that your domain is authorized in Firebase Console
+- Verify the reset link redirects to `/reset-password` with `oobCode` parameter
+- Customize the email template in Firebase Console → Authentication → Templates → Password reset
+  - Update the action URL to: `https://yourdomain.com/reset-password`
+
+## Password Reset Flow
+
+1. User clicks "Forgot password?" on login page
+2. User enters email address
+3. Firebase sends password reset email
+4. User clicks link in email
+5. Link redirects to `/reset-password?oobCode=...`
+6. User enters new password
+7. Password is reset and user is redirected to login
 
 ## Security Notes
 

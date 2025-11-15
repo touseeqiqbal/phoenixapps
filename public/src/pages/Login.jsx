@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../utils/AuthContext'
 import { Chrome } from 'lucide-react'
 import '../styles/Login.css'
@@ -8,9 +8,22 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
   const { login, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  
+  // Check for success message from password reset
+  useEffect(() => {
+    if (location.state?.message) {
+      setSuccess(location.state.message)
+      // Clear the state
+      window.history.replaceState({}, document.title)
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccess(''), 5000)
+    }
+  }, [location])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -47,6 +60,7 @@ export default function Login() {
         <p className="auth-subtitle">Sign in to your account</p>
         
         {error && <div className="error-message">{error}</div>}
+        {success && <div className="success-message" style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#166534', padding: '12px', borderRadius: '6px', marginBottom: '20px' }}>{success}</div>}
         
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -90,6 +104,9 @@ export default function Login() {
         </button>
         
         <p className="auth-footer">
+          <Link to="/forgot-password" style={{ display: 'block', marginBottom: '10px', color: '#4f46e5' }}>
+            Forgot password?
+          </Link>
           Don't have an account? <Link to="/register">Sign up</Link>
         </p>
       </div>

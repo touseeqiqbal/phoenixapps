@@ -18,7 +18,15 @@ const app = initializeApp(firebaseConfig)
 // Initialize Firebase Authentication and get a reference to the service
 export const auth = getAuth(app)
 
+// Configure password reset action URL
+// This tells Firebase where to redirect users when they click the reset link
+const actionCodeSettings = {
+  url: `${window.location.origin}/reset-password`,
+  handleCodeInApp: true,
+}
+
 // Google Auth Provider
 export const googleProvider = new GoogleAuthProvider()
 
+export { actionCodeSettings }
 export default app
