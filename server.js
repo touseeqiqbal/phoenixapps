@@ -52,9 +52,10 @@ app.use(express.static(staticDir, {
 }));
 
 // Serve index.html for all non-API routes (SPA routing)
-// Use app.use() instead of app.get("*") for Express 5 compatibility
+// Express 5 doesn't support "*" wildcard - use app.use() without path pattern
+// This middleware will catch all remaining routes after static files
 app.use((req, res, next) => {
-  // Skip API routes
+  // Skip API routes (should already be handled, but double-check)
   if (req.path.startsWith("/api")) {
     return next();
   }
