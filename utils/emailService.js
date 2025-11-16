@@ -5,12 +5,20 @@ const nodemailer = require('nodemailer');
 // For other services, update the configuration accordingly
 let transporter = null;
 
-function initializeEmailService() {
-  // Use environment variables for email configuration
-  const emailConfig = {
+function initializeEmailService(userSmtpConfig = null) {
+  // Use user-specific SMTP config if provided, otherwise use environment variables
+  const emailConfig = userSmtpConfig ? {
+    host: userSmtpConfig.host || 'smtp.gmail.com',
+    port: parseInt(userSmtpConfig.port || '587'),
+    secure: userSmtpConfig.secure === true || userSmtpConfig.secure === 'true',
+    auth: {
+      user: userSmtpConfig.user || '',
+      pass: userSmtpConfig.password || ''
+    }
+  } : {
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+    secure: process.env.SMTP_SECURE === 'true',
     auth: {
       user: process.env.SMTP_USER || '',
       pass: process.env.SMTP_PASSWORD || ''
@@ -21,7 +29,7 @@ function initializeEmailService() {
   if (emailConfig.auth.user && emailConfig.auth.pass) {
     try {
       transporter = nodemailer.createTransport(emailConfig);
-      console.log('Email service initialized');
+      console.log('Email service initialized', userSmtpConfig ? '(user-specific config)' : '(environment config)');
     } catch (error) {
       console.warn('Email service initialization failed:', error.message);
     }

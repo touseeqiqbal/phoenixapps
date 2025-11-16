@@ -420,4 +420,189 @@ router.put("/account/business", async (req, res) => {
   }
 });
 
+// Get SMTP configuration
+router.get("/account/smtp", async (req, res) => {
+  try {
+    const token = req.headers?.authorization?.replace("Bearer ", "");
+    if (!token) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    let userId;
+    if (firebaseInitialized) {
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      userId = decodedToken.uid;
+    } else {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+        userId = payload.user_id || payload.sub || payload.uid;
+      }
+    }
+
+    if (!userId) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const users = await getUsers();
+    const user = users.find((u) => u.uid === userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Return SMTP config (mask password for security)
+    const smtpConfig = user.smtpConfig || {};
+    res.json({
+      host: smtpConfig.host || '',
+      port: smtpConfig.port || 587,
+      secure: smtpConfig.secure || false,
+      user: smtpConfig.user || '',
+      from: smtpConfig.from || '',
+      passwordSet: !!smtpConfig.password // Only indicate if password is set, don't return it
+    });
+  } catch (error) {
+    console.error("Get SMTP config error:", error);
+    res.status(500).json({ error: "Failed to fetch SMTP configuration" });
+  }
+});
+
+// Update SMTP configuration
+router.put("/account/smtp", async (req, res) => {
+  try {
+    const token = req.headers?.authorization?.replace("Bearer ", "");
+    if (!token) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    let userId;
+    if (firebaseInitialized) {
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      userId = decodedToken.uid;
+    } else {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+        userId = payload.user_id || payload.sub || payload.uid;
+      }
+    }
+
+    if (!userId) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const users = await getUsers();
+    const userIndex = users.findIndex((u) => u.uid === userId);
+
+    if (userIndex === -1) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const { host, port, secure, user, password, from } = req.body;
+
+    // Update SMTP config (only update password if provided)
+    if (!users[userIndex].smtpConfig) {
+      users[userIndex].smtpConfig = {};
+    }
+
+    users[userIndex].smtpConfig = {
+      ...users[userIndex].smtpConfig,
+      host: host || users[userIndex].smtpConfig.host,
+      port: port || users[userIndex].smtpConfig.port || 587,
+      secure: secure !== undefined ? secure : users[userIndex].smtpConfig.secure,
+      user: user || users[userIndex].smtpConfig.user,
+      from: from || users[userIndex].smtpConfig.from,
+      ...(password && { password }) // Only update password if provided
+    };
+
+    users[userIndex].updatedAt = new Date().toISOString();
+    await saveUsers(users);
+
+    // Reinitialize email service with new config
+    const { initializeEmailService } = require(path.join(__dirname, "..", "utils", "emailService"));
+    initializeEmailService();
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Update SMTP config error:", error);
+    res.status(500).json({ error: "Failed to update SMTP configuration" });
+  }
+});
+
+// Test SMTP configuration
+router.post("/account/smtp/test", async (req, res) => {
+  try {
+    const token = req.headers?.authorization?.replace("Bearer ", "");
+    if (!token) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    let userId;
+    if (firebaseInitialized) {
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      userId = decodedToken.uid;
+    } else {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+        userId = payload.user_id || payload.sub || payload.uid;
+      }
+    }
+
+    if (!userId) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const users = await getUsers();
+    const user = users.find((u) => u.uid === userId);
+
+    if (!user || !user.smtpConfig) {
+      return res.status(400).json({ error: "SMTP configuration not found" });
+    }
+
+    const { sendEmail } = require(path.join(__dirname, "..", "utils", "emailService"));
+    
+    // Temporarily set environment variables for test
+    const originalEnv = {
+      SMTP_HOST: process.env.SMTP_HOST,
+      SMTP_PORT: process.env.SMTP_PORT,
+      SMTP_SECURE: process.env.SMTP_SECURE,
+      SMTP_USER: process.env.SMTP_USER,
+      SMTP_PASSWORD: process.env.SMTP_PASSWORD,
+      SMTP_FROM: process.env.SMTP_FROM
+    };
+
+    process.env.SMTP_HOST = user.smtpConfig.host;
+    process.env.SMTP_PORT = String(user.smtpConfig.port || 587);
+    process.env.SMTP_SECURE = String(user.smtpConfig.secure || false);
+    process.env.SMTP_USER = user.smtpConfig.user;
+    process.env.SMTP_PASSWORD = user.smtpConfig.password;
+    process.env.SMTP_FROM = user.smtpConfig.from || user.smtpConfig.user;
+
+    // Reinitialize email service
+    const { initializeEmailService } = require(path.join(__dirname, "..", "utils", "emailService"));
+    initializeEmailService();
+
+    // Send test email
+    const result = await sendEmail({
+      to: user.email,
+      subject: "SMTP Configuration Test",
+      html: "<p>This is a test email to verify your SMTP configuration is working correctly.</p>"
+    });
+
+    // Restore original environment variables
+    Object.assign(process.env, originalEnv);
+    initializeEmailService();
+
+    if (result.success) {
+      res.json({ success: true, message: "Test email sent successfully!" });
+    } else {
+      res.status(400).json({ success: false, error: result.error || "Failed to send test email" });
+    }
+  } catch (error) {
+    console.error("Test SMTP error:", error);
+    res.status(500).json({ error: "Failed to test SMTP configuration", message: error.message });
+  }
+});
+
 module.exports = router;

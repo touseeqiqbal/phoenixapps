@@ -30,6 +30,9 @@
     "express": "^5.1.0",
     "firebase-admin": "^13.6.0",
     "jsonwebtoken": "^9.0.2",
-    "nodemailer": "^6.10.1"
+    "nodemailer": "^6.10.1",
+    "intuit-oauth": "^1.0.0",
+    "node-quickbooks": "^2.0.0",
+    "axios": "^1.6.2"
   }
 }
