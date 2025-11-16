@@ -9,6 +9,7 @@
     "build": "cd public && npm install && npm run build",
     "install-frontend": "cd public && npm install",
     "vercel-build": "cd public && npm install && npm run build",
+    "render-build": "npm install && cd public && npm install && npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
