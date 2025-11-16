@@ -1,8 +1,7 @@
 const express = require("express");
 const fs = require("fs").promises;
 const path = require("path");
-<<<<<<< HEAD
-const { getDataFilePath } = require("../utils/dataPath");
+const { getDataFilePath } = require(path.join(__dirname, "..", "utils", "dataPath"));
 
 const router = express.Router();
 

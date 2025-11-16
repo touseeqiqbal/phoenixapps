@@ -1,9 +1,8 @@
 const express = require("express");
 const fs = require("fs").promises;
 const path = require("path");
-const { sendSubmissionNotification } = require("../utils/emailService");
-<<<<<<< HEAD
-const { getDataFilePath } = require("../utils/dataPath");
+const { sendSubmissionNotification } = require(path.join(__dirname, "..", "utils", "emailService"));
+const { getDataFilePath } = require(path.join(__dirname, "..", "utils", "dataPath"));
 
 const router = express.Router();
 

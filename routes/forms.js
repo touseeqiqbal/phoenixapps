@@ -2,8 +2,7 @@ const express = require("express");
 const fs = require("fs").promises;
 const path = require("path");
 const crypto = require("crypto");
-<<<<<<< HEAD
-const { getDataFilePath } = require("../utils/dataPath");
+const { getDataFilePath } = require(path.join(__dirname, "..", "utils", "dataPath"));
 const { db } = require("../utils/db");
 const useFirestore = !!(process.env.FIREBASE_SERVICE_ACCOUNT) && !!db;
 
@@ -460,12 +459,8 @@ router.get("/:id/members", async (req, res) => {
       // Get user info - try to get from users file
       let owner = null;
       try {
-<<<<<<< HEAD
-        const { getDataFilePath } = require("../utils/dataPath");
+        const { getDataFilePath } = require(path.join(__dirname, "..", "utils", "dataPath"));
         const usersFile = getDataFilePath("users.json");
-=======
-        const usersFile = path.join(__dirname, "../data/users.json");
->>>>>>> origin/main
         const usersData = await fs.readFile(usersFile, "utf8");
         const users = JSON.parse(usersData);
         owner = users.find(u => u.uid === form.userId);

@@ -2,8 +2,7 @@ const express = require("express");
 const admin = require("firebase-admin");
 const fs = require("fs").promises;
 const path = require("path");
-<<<<<<< HEAD
-const { getDataFilePath } = require("../utils/dataPath");
+const { getDataFilePath } = require(path.join(__dirname, "..", "utils", "dataPath"));
 
 const router = express.Router();
 

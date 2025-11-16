@@ -26,7 +26,7 @@ app.use((req, res, next) => {
 });
 
 app.get("/api/health", (_req, res) => {
-  const { getDataDir, getDataFilePath } = require("./utils/dataPath");
+  const { getDataDir, getDataFilePath } = require(path.join(__dirname, "utils", "dataPath"));
   const dataDir = getDataDir();
   const formsPath = getDataFilePath("forms.json");
   res.json({ 
