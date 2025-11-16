@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # Vercel Deployment Guide for BOOTMARK Form Builder
+=======
+# Vercel Deployment Guide for Phoenix Form Builder
+>>>>>>> origin/main
 
 ## Deployment Options
 

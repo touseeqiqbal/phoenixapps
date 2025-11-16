@@ -1,6 +1,7 @@
 const express = require("express");
 const fs = require("fs").promises;
 const path = require("path");
+<<<<<<< HEAD
 const { getDataFilePath } = require("../utils/dataPath");
 
 const router = express.Router();
@@ -29,28 +30,50 @@ async function initSubmissionsFile() {
       console.error("Error initializing submissions file:", writeError);
       throw writeError;
     }
+=======
+
+const router = express.Router();
+const SUBMISSIONS_FILE = path.join(__dirname, "../data/submissions.json");
+const FORMS_FILE = path.join(__dirname, "../data/forms.json");
+
+// Initialize submissions file
+async function initSubmissionsFile() {
+  try {
+    await fs.access(SUBMISSIONS_FILE);
+  } catch {
+    await fs.writeFile(SUBMISSIONS_FILE, JSON.stringify([], null, 2));
+>>>>>>> origin/main
   }
 }
 
 // Get submissions
 async function getSubmissions() {
+<<<<<<< HEAD
   const SUBMISSIONS_FILE = getSubmissionsFilePath();
   try {
     await initSubmissionsFile();
+=======
+  await initSubmissionsFile();
+  try {
+>>>>>>> origin/main
     const data = await fs.readFile(SUBMISSIONS_FILE, "utf8");
     return JSON.parse(data);
   } catch (error) {
     console.error("Error reading submissions file:", error);
+<<<<<<< HEAD
     // Return empty array if file doesn't exist (handles /tmp being cleared)
     if (error.code === 'ENOENT') {
       return [];
     }
+=======
+>>>>>>> origin/main
     return [];
   }
 }
 
 // Get forms
 async function getForms() {
+<<<<<<< HEAD
   const FORMS_FILE = getFormsFilePath();
   try {
     const data = await fs.readFile(FORMS_FILE, "utf8");
@@ -58,6 +81,12 @@ async function getForms() {
     return Array.isArray(forms) ? forms : [];
   } catch (error) {
     console.error("Error reading forms file:", error);
+=======
+  try {
+    const data = await fs.readFile(FORMS_FILE, "utf8");
+    return JSON.parse(data);
+  } catch {
+>>>>>>> origin/main
     return [];
   }
 }
@@ -148,11 +177,16 @@ router.delete("/:id", async (req, res) => {
       return res.status(403).json({ error: "Access denied" });
     }
 
+<<<<<<< HEAD
     const SUBMISSIONS_FILE = getSubmissionsFilePath();
     const updatedSubmissions = submissions.filter((s) => s.id !== req.params.id);
     const dir = path.dirname(SUBMISSIONS_FILE);
     await fs.mkdir(dir, { recursive: true });
     await fs.writeFile(SUBMISSIONS_FILE, JSON.stringify(updatedSubmissions, null, 2), 'utf8');
+=======
+    const updatedSubmissions = submissions.filter((s) => s.id !== req.params.id);
+    await fs.writeFile(SUBMISSIONS_FILE, JSON.stringify(updatedSubmissions, null, 2));
+>>>>>>> origin/main
 
     res.json({ message: "Submission deleted successfully" });
   } catch (error) {

@@ -2,6 +2,7 @@ const express = require("express");
 const admin = require("firebase-admin");
 const fs = require("fs").promises;
 const path = require("path");
+<<<<<<< HEAD
 const { getDataFilePath } = require("../utils/dataPath");
 
 const router = express.Router();
@@ -10,6 +11,11 @@ const router = express.Router();
 function getUsersFilePath() {
   return getDataFilePath("users.json");
 }
+=======
+
+const router = express.Router();
+const USERS_FILE = path.join(__dirname, "../data/users.json");
+>>>>>>> origin/main
 
 // Initialize Firebase Admin if credentials are provided
 let firebaseInitialized = false;
@@ -31,6 +37,7 @@ try {
 
 // Initialize users file
 async function initUsersFile() {
+<<<<<<< HEAD
   const USERS_FILE = getUsersFilePath();
   try {
     await fs.access(USERS_FILE);
@@ -44,11 +51,18 @@ async function initUsersFile() {
       console.error("Error initializing users file:", writeError);
       throw writeError;
     }
+=======
+  try {
+    await fs.access(USERS_FILE);
+  } catch {
+    await fs.writeFile(USERS_FILE, JSON.stringify([], null, 2));
+>>>>>>> origin/main
   }
 }
 
 // Get all users
 async function getUsers() {
+<<<<<<< HEAD
   const USERS_FILE = getUsersFilePath();
   try {
     await initUsersFile();
@@ -63,14 +77,23 @@ async function getUsers() {
     }
     return [];
   }
+=======
+  await initUsersFile();
+  const data = await fs.readFile(USERS_FILE, "utf8");
+  return JSON.parse(data);
+>>>>>>> origin/main
 }
 
 // Save users
 async function saveUsers(users) {
+<<<<<<< HEAD
   const USERS_FILE = getUsersFilePath();
   const dir = path.dirname(USERS_FILE);
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
+=======
+  await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
+>>>>>>> origin/main
 }
 
 // Verify Firebase token

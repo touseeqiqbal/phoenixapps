@@ -105,11 +105,15 @@ export default function FieldRenderer({ field, value, onChange, disabled }) {
         )
 
       case 'single-choice':
+<<<<<<< HEAD
       case 'radio': {
         const allowOther = field.allowOther
         const otherLabel = field.otherLabel || 'Other'
         const otherPlaceholder = field.otherPlaceholder || 'Please specify'
         const isOtherSelected = allowOther && value && !field.options?.includes(value)
+=======
+      case 'radio':
+>>>>>>> origin/main
         return (
           <div className="radio-group">
             {field.options?.map((option, idx) => (
@@ -126,6 +130,7 @@ export default function FieldRenderer({ field, value, onChange, disabled }) {
                 <span>{option}</span>
               </label>
             ))}
+<<<<<<< HEAD
             {allowOther && (
               <div className="radio-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <label className="radio-label" style={{ margin: 0 }}>
@@ -163,6 +168,13 @@ export default function FieldRenderer({ field, value, onChange, disabled }) {
         const current = Array.isArray(value) ? value : []
         const otherValue = current.find(v => !field.options?.includes(v)) || ''
         const isOtherChecked = allowOther && !!otherValue
+=======
+          </div>
+        )
+
+      case 'multiple-choice':
+      case 'checkbox':
+>>>>>>> origin/main
         return (
           <div className="checkbox-group">
             {field.options?.map((option, idx) => (
@@ -170,11 +182,20 @@ export default function FieldRenderer({ field, value, onChange, disabled }) {
                 <input
                   type="checkbox"
                   value={option}
+<<<<<<< HEAD
                   checked={current.includes(option)}
                   onChange={(e) => {
                     const newValue = e.target.checked
                       ? [...current, option]
                       : current.filter(v => v !== option && v !== '')
+=======
+                  checked={Array.isArray(value) && value.includes(option)}
+                  onChange={(e) => {
+                    const current = Array.isArray(value) ? value : []
+                    const newValue = e.target.checked
+                      ? [...current, option]
+                      : current.filter(v => v !== option)
+>>>>>>> origin/main
                     onChange?.(newValue)
                   }}
                   disabled={disabled}
@@ -182,6 +203,7 @@ export default function FieldRenderer({ field, value, onChange, disabled }) {
                 <span>{option}</span>
               </label>
             ))}
+<<<<<<< HEAD
             {allowOther && (
               <div className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <label className="checkbox-label" style={{ margin: 0 }}>
@@ -222,6 +244,10 @@ export default function FieldRenderer({ field, value, onChange, disabled }) {
           </div>
         )
       }
+=======
+          </div>
+        )
+>>>>>>> origin/main
 
       case 'file':
         return (

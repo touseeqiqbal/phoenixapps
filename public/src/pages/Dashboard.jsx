@@ -36,6 +36,7 @@ export default function Dashboard() {
       navigate(`/form/${response.data.id}`)
     } catch (error) {
       console.error('Failed to create form:', error)
+<<<<<<< HEAD
       console.error('Error response:', error.response)
       console.error('Error response data:', error.response?.data)
       
@@ -59,6 +60,10 @@ export default function Dashboard() {
         errorMessage = error.message;
       }
       
+=======
+      const errorMessage = error.response?.data?.error || error.response?.data?.details || error.message || 'Failed to create form'
+      console.error('Error details:', error.response?.data)
+>>>>>>> origin/main
       alert(`Failed to create form: ${errorMessage}`)
     }
   }
@@ -93,7 +98,11 @@ export default function Dashboard() {
         <div className="container">
           <div className="header-content">
             <div className="dashboard-brand">
+<<<<<<< HEAD
               <h1 className="brand-title">BOOTMARK Form Builder</h1>
+=======
+              <h1 className="brand-title">Phoenix Form Builder</h1>
+>>>>>>> origin/main
               <span className="brand-subtitle">My Forms</span>
             </div>
             <div className="header-actions">
