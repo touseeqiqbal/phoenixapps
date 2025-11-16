@@ -2,7 +2,7 @@ const express = require("express");
 const fs = require("fs").promises;
 const path = require("path");
 const crypto = require("crypto");
-const { getDataFilePath } = require("/workspace/utils/dataPath");
+const { getDataFilePath } = require("../utils/dataPath");
 const { db } = require("../utils/db");
 const useFirestore = !!(process.env.FIREBASE_SERVICE_ACCOUNT) && !!db;
 
