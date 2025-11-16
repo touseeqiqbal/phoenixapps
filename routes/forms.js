@@ -2,7 +2,9 @@ const express = require("express");
 const fs = require("fs").promises;
 const path = require("path");
 const crypto = require("crypto");
-const { getDataFilePath } = require("../utils/dataPath");
+const { getDataFilePath } = require("/workspace/utils/dataPath");
+const { db } = require("../utils/db");
+const useFirestore = !!(process.env.FIREBASE_SERVICE_ACCOUNT) && !!db;
 
 const router = express.Router();
 
@@ -100,33 +102,45 @@ async function saveForms(forms) {
 // Get user's forms
 router.get("/", async (req, res) => {
   try {
-    const forms = await getForms();
-    const userId = req.user.uid || req.user.id; // Support both Firebase UID and legacy ID
-    const userForms = forms.filter((f) => f.userId === userId);
-    res.json(userForms);
+    const userId = req.user?.uid || req.user?.id
+    if (!userId) return res.status(401).json({ error: 'Not authenticated' })
+    if (useFirestore) {
+      const snap = await db.collection('forms').where('userId', '==', userId).get()
+      const items = []
+      snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }))
+      return res.json(items)
+    }
+    const forms = await getForms()
+    const userForms = forms.filter((f) => f.userId === userId)
+    res.json(userForms)
   } catch (error) {
-    console.error("Get forms error:", error);
-    res.status(500).json({ error: "Failed to fetch forms" });
+    console.error("Get forms error:", error)
+    res.status(500).json({ error: "Failed to fetch forms" })
   }
 });
 
 // Get single form
 router.get("/:id", async (req, res) => {
   try {
+    const userId = req.user?.uid || req.user?.id
+    if (useFirestore) {
+      const doc = await db.collection('forms').doc(req.params.id).get()
+      if (!doc || !doc.exists) return res.status(404).json({ error: 'Form not found' })
+      const form = { id: doc.id, ...doc.data() }
+      if (form.userId !== userId) return res.status(403).json({ error: 'Access denied' })
+      return res.json(form)
+    }
     const forms = await getForms();
     const form = forms.find((f) => f.id === req.params.id);
-
     if (!form) {
       return res.status(404).json({ error: "Form not found" });
     }
-
-    const userId = req.user.uid || req.user.id;
     if (form.userId !== userId) {
       return res.status(403).json({ error: "Access denied" });
     }
-
     res.json(form);
-  } catch (error) {
+  } 
+  catch (error) {
     console.error("Get form error:", error);
     res.status(500).json({ error: "Failed to fetch form" });
   }
@@ -195,6 +209,13 @@ router.post("/", async (req, res) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
+    // If Firestore configured, store form there and return early
+    if (useFirestore) {
+      await db.collection('forms').doc(newForm.id).set(newForm)
+      console.log("Form created in Firestore:", newForm.id)
+      return res.status(201).json(newForm)
+    }
 
     forms.push(newForm);
     console.log("Attempting to save forms, new count:", forms.length);
