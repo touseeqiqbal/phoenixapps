@@ -26,7 +26,21 @@ app.use((req, res, next) => {
 });
 
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+  const { getDataDir, getDataFilePath } = require("./utils/dataPath");
+  const dataDir = getDataDir();
+  const formsPath = getDataFilePath("forms.json");
+  res.json({ 
+    status: "ok", 
+    timestamp: new Date().toISOString(),
+    environment: {
+      VERCEL: process.env.VERCEL,
+      VERCEL_ENV: process.env.VERCEL_ENV,
+      AWS_LAMBDA_FUNCTION_NAME: process.env.AWS_LAMBDA_FUNCTION_NAME,
+      __dirname: __dirname
+    },
+    dataDirectory: dataDir,
+    formsFilePath: formsPath
+  });
 });
 
 app.use("/api/auth", authRouter);

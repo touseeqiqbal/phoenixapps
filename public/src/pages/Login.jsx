@@ -56,7 +56,11 @@ export default function Login() {
   return (
     <div className="auth-container">
       <div className="auth-card">
+<<<<<<< HEAD
+        <h1>BOOTMARK Form Builder</h1>
+=======
         <h1>Phoenix Form Builder</h1>
+>>>>>>> origin/main
         <p className="auth-subtitle">Sign in to your account</p>
         
         {error && <div className="error-message">{error}</div>}

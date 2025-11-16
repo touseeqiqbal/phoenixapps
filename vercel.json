@@ -3,6 +3,25 @@
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "public/dist",
   "installCommand": "npm install && cd public && npm install",
+<<<<<<< HEAD
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api"
+    },
+    {
+      "source": "/share/(.*)",
+      "destination": "/api"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+=======
   "builds": [
     {
       "src": "server.js",
@@ -21,6 +40,7 @@
     {
       "src": "/(.*)",
       "dest": "/server.js"
+>>>>>>> origin/main
     }
   ]
 }

@@ -79,7 +79,11 @@ export default function ResetPassword() {
   return (
     <div className="auth-container">
       <div className="auth-card">
+<<<<<<< HEAD
+        <h1>BOOTMARK Form Builder</h1>
+=======
         <h1>Phoenix Form Builder</h1>
+>>>>>>> origin/main
         <p className="auth-subtitle">Set new password</p>
         
         {error && (

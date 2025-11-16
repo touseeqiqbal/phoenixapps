@@ -1,4 +1,8 @@
+<<<<<<< HEAD
+# Email Configuration Guide - BOOTMARK Form Builder
+=======
 # Email Configuration Guide - Phoenix Form Builder
+>>>>>>> origin/main
 
 This guide will help you set up email notifications for form submissions.
 
@@ -173,7 +177,11 @@ SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=myformbuilder@gmail.com
 SMTP_PASSWORD=abcd efgh ijkl mnop
+<<<<<<< HEAD
+   SMTP_FROM=notifications@bootmark.com
+=======
 SMTP_FROM=myformbuilder@gmail.com
+>>>>>>> origin/main
 
 # Firebase (if not already set)
 VITE_FIREBASE_API_KEY=your-key
