@@ -17,6 +17,11 @@ export default function FieldEditor({ field, onUpdate, onClose }) {
       required: fieldData.required || false,
       description: fieldData.description || '',
       options: needsOptions ? (fieldData.options && fieldData.options.length > 0 ? [...fieldData.options] : ['Option 1', 'Option 2']) : [],
+      ...(needsOptions && {
+        allowOther: fieldData.allowOther || false,
+        otherLabel: fieldData.otherLabel || 'Other',
+        otherPlaceholder: fieldData.otherPlaceholder || 'Please specify'
+      }),
       ...(fieldData.type === 'number' && { min: fieldData.min, max: fieldData.max }),
       ...(fieldData.type === 'rating' && { max: fieldData.max || 5 }),
       ...(fieldData.type === 'star-rating' && { max: fieldData.max || 5 }),
@@ -176,6 +181,38 @@ export default function FieldEditor({ field, onUpdate, onClose }) {
             </button>
             {formData.options && formData.options.length === 0 && (
               <small className="help-text">Add at least one option for users to choose from</small>
+            )}
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={formData.allowOther || false}
+                  onChange={(e) => updateField('allowOther', e.target.checked)}
+                />
+                <span>Allow "Other" option</span>
+              </label>
+            </div>
+            {formData.allowOther && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <label>Other label</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={formData.otherLabel || 'Other'}
+                    onChange={(e) => updateField('otherLabel', e.target.value)}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label>Other placeholder</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={formData.otherPlaceholder || 'Please specify'}
+                    onChange={(e) => updateField('otherPlaceholder', e.target.value)}
+                  />
+                </div>
+              </div>
             )}
           </div>
         )}
