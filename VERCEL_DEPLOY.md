@@ -1,4 +1,4 @@
-# Vercel Deployment Guide for Phoenix Form Builder
+# Vercel Deployment Guide for BOOTMARK Form Builder
 
 ## Deployment Options
 

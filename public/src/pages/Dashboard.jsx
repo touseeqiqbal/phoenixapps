@@ -93,7 +93,7 @@ export default function Dashboard() {
         <div className="container">
           <div className="header-content">
             <div className="dashboard-brand">
-              <h1 className="brand-title">Phoenix Form Builder</h1>
+              <h1 className="brand-title">BOOTMARK Form Builder</h1>
               <span className="brand-subtitle">My Forms</span>
             </div>
             <div className="header-actions">

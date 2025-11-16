@@ -1,4 +1,4 @@
-# Phoenix Form Builder
+# BOOTMARK Form Builder
 
 A comprehensive form builder application with drag-and-drop functionality. Built with React, Express, and multiple framework support.
 
