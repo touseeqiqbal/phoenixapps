@@ -45,24 +45,11 @@ async function initFormsFile() {
       });
       throw writeError;
     }
-=======
-
-const router = express.Router();
-const FORMS_FILE = path.join(__dirname, "../data/forms.json");
-
-// Initialize forms file
-async function initFormsFile() {
-  try {
-    await fs.access(FORMS_FILE);
-  } catch {
-    await fs.writeFile(FORMS_FILE, JSON.stringify([], null, 2));
->>>>>>> origin/main
   }
 }
 
 // Get all forms
 async function getForms() {
-<<<<<<< HEAD
   const FORMS_FILE = getFormsFilePath();
   try {
     await initFormsFile();
@@ -78,16 +65,10 @@ async function getForms() {
     }
     throw error;
   }
-=======
-  await initFormsFile();
-  const data = await fs.readFile(FORMS_FILE, "utf8");
-  return JSON.parse(data);
->>>>>>> origin/main
 }
 
 // Save forms
 async function saveForms(forms) {
-<<<<<<< HEAD
   const FORMS_FILE = getFormsFilePath();
   try {
     // Ensure directory exists before writing
@@ -114,13 +95,6 @@ async function saveForms(forms) {
       syscall: error.syscall,
       stack: error.stack
     });
-=======
-  try {
-    await fs.writeFile(FORMS_FILE, JSON.stringify(forms, null, 2));
-    console.log("Forms saved successfully, count:", forms.length);
-  } catch (error) {
-    console.error("Error saving forms:", error);
->>>>>>> origin/main
     throw error;
   }
 }
@@ -128,7 +102,6 @@ async function saveForms(forms) {
 // Get user's forms
 router.get("/", async (req, res) => {
   try {
-<<<<<<< HEAD
     const userId = req.user?.uid || req.user?.id
     if (!userId) return res.status(401).json({ error: 'Not authenticated' })
     if (useFirestore) {
@@ -143,22 +116,12 @@ router.get("/", async (req, res) => {
   } catch (error) {
     console.error("Get forms error:", error)
     res.status(500).json({ error: "Failed to fetch forms" })
-=======
-    const forms = await getForms();
-    const userId = req.user.uid || req.user.id; // Support both Firebase UID and legacy ID
-    const userForms = forms.filter((f) => f.userId === userId);
-    res.json(userForms);
-  } catch (error) {
-    console.error("Get forms error:", error);
-    res.status(500).json({ error: "Failed to fetch forms" });
->>>>>>> origin/main
   }
 });
 
 // Get single form
 router.get("/:id", async (req, res) => {
   try {
-<<<<<<< HEAD
     const userId = req.user?.uid || req.user?.id
     if (useFirestore) {
       const doc = await db.collection('forms').doc(req.params.id).get()
@@ -178,22 +141,6 @@ router.get("/:id", async (req, res) => {
     res.json(form);
   } 
   catch (error) {
-=======
-    const forms = await getForms();
-    const form = forms.find((f) => f.id === req.params.id);
-
-    if (!form) {
-      return res.status(404).json({ error: "Form not found" });
-    }
-
-    const userId = req.user.uid || req.user.id;
-    if (form.userId !== userId) {
-      return res.status(403).json({ error: "Access denied" });
-    }
-
-    res.json(form);
-  } catch (error) {
->>>>>>> origin/main
     console.error("Get form error:", error);
     res.status(500).json({ error: "Failed to fetch form" });
   }
@@ -202,17 +149,11 @@ router.get("/:id", async (req, res) => {
 // Create form
 router.post("/", async (req, res) => {
   try {
-<<<<<<< HEAD
     const FORMS_FILE = getFormsFilePath();
     console.log("Create form request received");
     console.log("Request user:", req.user);
     console.log("Request body:", req.body);
     console.log("Forms file path:", FORMS_FILE);
-=======
-    console.log("Create form request received");
-    console.log("Request user:", req.user);
-    console.log("Request body:", req.body);
->>>>>>> origin/main
 
     const { title, fields, settings } = req.body;
 
@@ -227,20 +168,6 @@ router.post("/", async (req, res) => {
       return res.status(401).json({ error: "User not authenticated", details: "User ID not found" });
     }
 
-<<<<<<< HEAD
-=======
-    const forms = await getForms();
->>>>>>> origin/main
-    const userId = req.user.uid || req.user.id;
-    
-    if (!userId) {
-      console.error("Invalid user ID extracted");
-      return res.status(401).json({ error: "Invalid user ID", details: "Could not extract user ID" });
-    }
-
-    console.log("Creating form for user:", userId);
-
-<<<<<<< HEAD
     // Get existing forms
     let forms;
     try {
@@ -258,8 +185,32 @@ router.post("/", async (req, res) => {
       console.log("Starting with empty forms array due to error");
     }
 
-=======
->>>>>>> origin/main
+    const userId = req.user.uid || req.user.id;
+    
+    if (!userId) {
+      console.error("Invalid user ID extracted");
+      return res.status(401).json({ error: "Invalid user ID", details: "Could not extract user ID" });
+    }
+
+    console.log("Creating form for user:", userId);
+
+    // Get existing forms
+    let forms;
+    try {
+      forms = await getForms();
+      console.log("Retrieved forms, count:", forms.length);
+      // Ensure forms is an array
+      if (!Array.isArray(forms)) {
+        console.warn("Forms data is not an array, resetting to empty array");
+        forms = [];
+      }
+    } catch (getError) {
+      console.error("Error getting forms:", getError);
+      // If file doesn't exist or can't be read, start with empty array
+      forms = [];
+      console.log("Starting with empty forms array due to error");
+    }
+
     const newForm = {
       id: crypto.randomBytes(16).toString("hex"),
       userId: userId,
@@ -276,7 +227,6 @@ router.post("/", async (req, res) => {
       updatedAt: new Date().toISOString(),
     };
 
-<<<<<<< HEAD
     // If Firestore configured, store form there and return early
     if (useFirestore) {
       await db.collection('forms').doc(newForm.id).set(newForm)
@@ -287,16 +237,12 @@ router.post("/", async (req, res) => {
     forms.push(newForm);
     console.log("Attempting to save forms, new count:", forms.length);
     
-=======
-    forms.push(newForm);
->>>>>>> origin/main
     await saveForms(forms);
 
     console.log("Form created successfully:", newForm.id);
     res.status(201).json(newForm);
   } catch (error) {
     console.error("Create form error:", error);
-<<<<<<< HEAD
     console.error("Error name:", error.name);
     console.error("Error code:", error.code);
     console.error("Error message:", error.message);
@@ -316,13 +262,6 @@ router.post("/", async (req, res) => {
       error: errorMessage,
       details: error.message,
       code: error.code
-=======
-    console.error("Error stack:", error.stack);
-    res.status(500).json({ 
-      error: "Failed to create form", 
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
->>>>>>> origin/main
     });
   }
 });
@@ -388,7 +327,6 @@ router.delete("/:id", async (req, res) => {
 });
 
 // Team Collaboration Routes
-<<<<<<< HEAD
 // Lazy file path resolution for team collaboration files
 function getMembersFilePath() {
   return getDataFilePath("members.json");
@@ -406,21 +344,10 @@ async function initMembersFile() {
     const dir = path.dirname(MEMBERS_FILE);
     await fs.mkdir(dir, { recursive: true });
     await fs.writeFile(MEMBERS_FILE, JSON.stringify({}, null, 2), 'utf8');
-=======
-const MEMBERS_FILE = path.join(__dirname, "../data/members.json");
-const INVITES_FILE = path.join(__dirname, "../data/invites.json");
-
-async function initMembersFile() {
-  try {
-    await fs.access(MEMBERS_FILE);
-  } catch {
-    await fs.writeFile(MEMBERS_FILE, JSON.stringify({}, null, 2));
->>>>>>> origin/main
   }
 }
 
 async function initInvitesFile() {
-<<<<<<< HEAD
   const INVITES_FILE = getInvitesFilePath();
   try {
     await fs.access(INVITES_FILE);
@@ -428,22 +355,13 @@ async function initInvitesFile() {
     const dir = path.dirname(INVITES_FILE);
     await fs.mkdir(dir, { recursive: true });
     await fs.writeFile(INVITES_FILE, JSON.stringify({}, null, 2), 'utf8');
-=======
-  try {
-    await fs.access(INVITES_FILE);
-  } catch {
-    await fs.writeFile(INVITES_FILE, JSON.stringify({}, null, 2));
->>>>>>> origin/main
   }
 }
 
 // Get form members
 router.get("/:id/members", async (req, res) => {
   try {
-<<<<<<< HEAD
     const MEMBERS_FILE = getMembersFilePath();
-=======
->>>>>>> origin/main
     await initMembersFile();
     const data = await fs.readFile(MEMBERS_FILE, "utf8");
     const allMembers = JSON.parse(data);
@@ -489,10 +407,7 @@ router.get("/:id/members", async (req, res) => {
 // Get form invites
 router.get("/:id/invites", async (req, res) => {
   try {
-<<<<<<< HEAD
     const INVITES_FILE = getInvitesFilePath();
-=======
->>>>>>> origin/main
     await initInvitesFile();
     const data = await fs.readFile(INVITES_FILE, "utf8");
     const allInvites = JSON.parse(data);
@@ -517,10 +432,7 @@ router.post("/:id/invites", async (req, res) => {
       return res.status(403).json({ error: "Only form owner can invite members" });
     }
 
-<<<<<<< HEAD
     const INVITES_FILE = getInvitesFilePath();
-=======
->>>>>>> origin/main
     await initInvitesFile();
     const data = await fs.readFile(INVITES_FILE, "utf8");
     const allInvites = JSON.parse(data);
@@ -538,13 +450,9 @@ router.post("/:id/invites", async (req, res) => {
     };
 
     allInvites[req.params.id].push(invite);
-<<<<<<< HEAD
     const dir = path.dirname(INVITES_FILE);
     await fs.mkdir(dir, { recursive: true });
     await fs.writeFile(INVITES_FILE, JSON.stringify(allInvites, null, 2), 'utf8');
-=======
-    await fs.writeFile(INVITES_FILE, JSON.stringify(allInvites, null, 2));
->>>>>>> origin/main
 
     res.json(invite);
   } catch (error) {
@@ -556,10 +464,7 @@ router.post("/:id/invites", async (req, res) => {
 // Cancel invite
 router.delete("/:id/invites/:inviteId", async (req, res) => {
   try {
-<<<<<<< HEAD
     const INVITES_FILE = getInvitesFilePath();
-=======
->>>>>>> origin/main
     await initInvitesFile();
     const data = await fs.readFile(INVITES_FILE, "utf8");
     const allInvites = JSON.parse(data);
@@ -568,13 +473,9 @@ router.delete("/:id/invites/:inviteId", async (req, res) => {
       allInvites[req.params.id] = allInvites[req.params.id].filter(
         i => i.id !== req.params.inviteId
       );
-<<<<<<< HEAD
       const dir = path.dirname(INVITES_FILE);
       await fs.mkdir(dir, { recursive: true });
       await fs.writeFile(INVITES_FILE, JSON.stringify(allInvites, null, 2), 'utf8');
-=======
-      await fs.writeFile(INVITES_FILE, JSON.stringify(allInvites, null, 2));
->>>>>>> origin/main
     }
 
     res.json({ success: true });
@@ -598,10 +499,7 @@ router.put("/:id/members/:memberId", async (req, res) => {
       return res.status(403).json({ error: "Only form owner can update roles" });
     }
 
-<<<<<<< HEAD
     const MEMBERS_FILE = getMembersFilePath();
-=======
->>>>>>> origin/main
     await initMembersFile();
     const data = await fs.readFile(MEMBERS_FILE, "utf8");
     const allMembers = JSON.parse(data);
@@ -613,13 +511,9 @@ router.put("/:id/members/:memberId", async (req, res) => {
     const memberIndex = allMembers[req.params.id].findIndex(m => m.id === req.params.memberId);
     if (memberIndex !== -1) {
       allMembers[req.params.id][memberIndex].role = req.body.role;
-<<<<<<< HEAD
       const dir = path.dirname(MEMBERS_FILE);
       await fs.mkdir(dir, { recursive: true });
       await fs.writeFile(MEMBERS_FILE, JSON.stringify(allMembers, null, 2), 'utf8');
-=======
-      await fs.writeFile(MEMBERS_FILE, JSON.stringify(allMembers, null, 2));
->>>>>>> origin/main
     }
 
     res.json({ success: true });
@@ -643,10 +537,7 @@ router.delete("/:id/members/:memberId", async (req, res) => {
       return res.status(403).json({ error: "Only form owner can remove members" });
     }
 
-<<<<<<< HEAD
     const MEMBERS_FILE = getMembersFilePath();
-=======
->>>>>>> origin/main
     await initMembersFile();
     const data = await fs.readFile(MEMBERS_FILE, "utf8");
     const allMembers = JSON.parse(data);
@@ -655,13 +546,9 @@ router.delete("/:id/members/:memberId", async (req, res) => {
       allMembers[req.params.id] = allMembers[req.params.id].filter(
         m => m.id !== req.params.memberId
       );
-<<<<<<< HEAD
       const dir = path.dirname(MEMBERS_FILE);
       await fs.mkdir(dir, { recursive: true });
       await fs.writeFile(MEMBERS_FILE, JSON.stringify(allMembers, null, 2), 'utf8');
-=======
-      await fs.writeFile(MEMBERS_FILE, JSON.stringify(allMembers, null, 2));
->>>>>>> origin/main
     }
 
     res.json({ success: true });
