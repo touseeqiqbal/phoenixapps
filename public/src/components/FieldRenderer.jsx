@@ -104,150 +104,126 @@ export default function FieldRenderer({ field, value, onChange, disabled }) {
           </select>
         )
 
-      case 'single-choice':
-<<<<<<< HEAD
-      case 'radio': {
-        const allowOther = field.allowOther
-        const otherLabel = field.otherLabel || 'Other'
-        const otherPlaceholder = field.otherPlaceholder || 'Please specify'
-        const isOtherSelected = allowOther && value && !field.options?.includes(value)
-=======
-      case 'radio':
->>>>>>> origin/main
-        return (
-          <div className="radio-group">
-            {field.options?.map((option, idx) => (
-              <label key={idx} className="radio-label">
+    case 'single-choice':
+    case 'radio': {
+      const allowOther = field.allowOther
+      const otherLabel = field.otherLabel || 'Other'
+      const otherPlaceholder = field.otherPlaceholder || 'Please specify'
+      const isOtherSelected = allowOther && value && !field.options?.includes(value)
+
+      return (
+        <div className="radio-group">
+          {field.options?.map((option, idx) => (
+            <label key={idx} className="radio-label">
+              <input
+                type="radio"
+                name={field.id}
+                value={option}
+                checked={value === option}
+                onChange={(e) => onChange?.(e.target.value)}
+                disabled={disabled}
+                required={field.required}
+              />
+              <span>{option}</span>
+            </label>
+          ))}
+          {allowOther && (
+            <div className="radio-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label className="radio-label" style={{ margin: 0 }}>
                 <input
                   type="radio"
                   name={field.id}
-                  value={option}
-                  checked={value === option}
-                  onChange={(e) => onChange?.(e.target.value)}
+                  value="__other__"
+                  checked={isOtherSelected}
+                  onChange={() => onChange?.('')}
                   disabled={disabled}
                   required={field.required}
                 />
-                <span>{option}</span>
+                <span>{otherLabel}</span>
               </label>
-            ))}
-<<<<<<< HEAD
-            {allowOther && (
-              <div className="radio-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <label className="radio-label" style={{ margin: 0 }}>
-                  <input
-                    type="radio"
-                    name={field.id}
-                    value="__other__"
-                    checked={isOtherSelected}
-                    onChange={() => onChange?.('')}
-                    disabled={disabled}
-                    required={field.required}
-                  />
-                  <span>{otherLabel}</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder={otherPlaceholder}
-                  value={isOtherSelected ? value : ''}
-                  onChange={(e) => onChange?.(e.target.value)}
-                  disabled={disabled || !isOtherSelected}
-                  className="field-input"
-                  style={{ maxWidth: 240 }}
-                />
-              </div>
-            )}
-          </div>
-        )
-      }
+              <input
+                type="text"
+                placeholder={otherPlaceholder}
+                value={isOtherSelected ? value : ''}
+                onChange={(e) => onChange?.(e.target.value)}
+                disabled={disabled || !isOtherSelected}
+                className="field-input"
+                style={{ maxWidth: 240 }}
+              />
+            </div>
+          )}
+        </div>
+      )
+    }
 
-      case 'multiple-choice':
-      case 'checkbox': {
-        const allowOther = field.allowOther
-        const otherLabel = field.otherLabel || 'Other'
-        const otherPlaceholder = field.otherPlaceholder || 'Please specify'
-        const current = Array.isArray(value) ? value : []
-        const otherValue = current.find(v => !field.options?.includes(v)) || ''
-        const isOtherChecked = allowOther && !!otherValue
-=======
-          </div>
-        )
+    case 'multiple-choice':
+    case 'checkbox': {
+      const allowOther = field.allowOther
+      const otherLabel = field.otherLabel || 'Other'
+      const otherPlaceholder = field.otherPlaceholder || 'Please specify'
+      const current = Array.isArray(value) ? value : []
+      const otherValue = current.find(v => !field.options?.includes(v)) || ''
+      const isOtherChecked = allowOther && !!otherValue
 
-      case 'multiple-choice':
-      case 'checkbox':
->>>>>>> origin/main
-        return (
-          <div className="checkbox-group">
-            {field.options?.map((option, idx) => (
-              <label key={idx} className="checkbox-label">
+      return (
+        <div className="checkbox-group">
+          {field.options?.map((option, idx) => (
+            <label key={idx} className="checkbox-label">
+              <input
+                type="checkbox"
+                value={option}
+                checked={current.includes(option)}
+                onChange={(e) => {
+                  const newValue = e.target.checked
+                    ? [...current, option]
+                    : current.filter(v => v !== option && v !== '')
+                  onChange?.(newValue)
+                }}
+                disabled={disabled}
+              />
+              <span>{option}</span>
+            </label>
+          ))}
+          {allowOther && (
+            <div className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <label className="checkbox-label" style={{ margin: 0 }}>
                 <input
                   type="checkbox"
-                  value={option}
-<<<<<<< HEAD
-                  checked={current.includes(option)}
+                  value="__other__"
+                  checked={isOtherChecked}
                   onChange={(e) => {
-                    const newValue = e.target.checked
-                      ? [...current, option]
-                      : current.filter(v => v !== option && v !== '')
-=======
-                  checked={Array.isArray(value) && value.includes(option)}
-                  onChange={(e) => {
-                    const current = Array.isArray(value) ? value : []
-                    const newValue = e.target.checked
-                      ? [...current, option]
-                      : current.filter(v => v !== option)
->>>>>>> origin/main
-                    onChange?.(newValue)
+                    if (e.target.checked) {
+                      onChange?.([...current, ''])
+                    } else {
+                      onChange?.(current.filter(v => field.options?.includes(v)))
+                    }
                   }}
                   disabled={disabled}
                 />
-                <span>{option}</span>
+                <span>{otherLabel}</span>
               </label>
-            ))}
-<<<<<<< HEAD
-            {allowOther && (
-              <div className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <label className="checkbox-label" style={{ margin: 0 }}>
-                  <input
-                    type="checkbox"
-                    value="__other__"
-                    checked={isOtherChecked}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        onChange?.([...current, ''])
-                      } else {
-                        onChange?.(current.filter(v => field.options?.includes(v)))
-                      }
-                    }}
-                    disabled={disabled}
-                  />
-                  <span>{otherLabel}</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder={otherPlaceholder}
-                  value={otherValue}
-                  onChange={(e) => {
-                    const typed = e.target.value
-                    const filtered = current.filter(v => field.options?.includes(v))
-                    if (typed) {
-                      onChange?.([...filtered, typed])
-                    } else {
-                      onChange?.(filtered)
-                    }
-                  }}
-                  disabled={disabled || !isOtherChecked}
-                  className="field-input"
-                  style={{ maxWidth: 240 }}
-                />
-              </div>
-            )}
-          </div>
-        )
-      }
-=======
-          </div>
-        )
->>>>>>> origin/main
+              <input
+                type="text"
+                placeholder={otherPlaceholder}
+                value={otherValue}
+                onChange={(e) => {
+                  const typed = e.target.value
+                  const filtered = current.filter(v => field.options?.includes(v))
+                  if (typed) {
+                    onChange?.([...filtered, typed])
+                  } else {
+                    onChange?.(filtered)
+                  }
+                }}
+                disabled={disabled || !isOtherChecked}
+                className="field-input"
+                style={{ maxWidth: 240 }}
+              />
+            </div>
+          )}
+        </div>
+      )
+    }
 
       case 'file':
         return (

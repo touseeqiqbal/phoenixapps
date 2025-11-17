@@ -17,14 +17,11 @@ export default function FieldEditor({ field, onUpdate, onClose }) {
       required: fieldData.required || false,
       description: fieldData.description || '',
       options: needsOptions ? (fieldData.options && fieldData.options.length > 0 ? [...fieldData.options] : ['Option 1', 'Option 2']) : [],
-<<<<<<< HEAD
       ...(needsOptions && {
         allowOther: fieldData.allowOther || false,
         otherLabel: fieldData.otherLabel || 'Other',
         otherPlaceholder: fieldData.otherPlaceholder || 'Please specify'
       }),
-=======
->>>>>>> origin/main
       ...(fieldData.type === 'number' && { min: fieldData.min, max: fieldData.max }),
       ...(fieldData.type === 'rating' && { max: fieldData.max || 5 }),
       ...(fieldData.type === 'star-rating' && { max: fieldData.max || 5 }),
@@ -185,7 +182,6 @@ export default function FieldEditor({ field, onUpdate, onClose }) {
             {formData.options && formData.options.length === 0 && (
               <small className="help-text">Add at least one option for users to choose from</small>
             )}
-<<<<<<< HEAD
             <div className="form-group" style={{ marginTop: 12 }}>
               <label className="checkbox-label">
                 <input
@@ -218,8 +214,6 @@ export default function FieldEditor({ field, onUpdate, onClose }) {
                 </div>
               </div>
             )}
-=======
->>>>>>> origin/main
           </div>
         )}
 
