@@ -193,24 +193,6 @@ router.post("/", async (req, res) => {
     }
 
     console.log("Creating form for user:", userId);
-
-    // Get existing forms
-    let forms;
-    try {
-      forms = await getForms();
-      console.log("Retrieved forms, count:", forms.length);
-      // Ensure forms is an array
-      if (!Array.isArray(forms)) {
-        console.warn("Forms data is not an array, resetting to empty array");
-        forms = [];
-      }
-    } catch (getError) {
-      console.error("Error getting forms:", getError);
-      // If file doesn't exist or can't be read, start with empty array
-      forms = [];
-      console.log("Starting with empty forms array due to error");
-    }
-
     const newForm = {
       id: crypto.randomBytes(16).toString("hex"),
       userId: userId,
