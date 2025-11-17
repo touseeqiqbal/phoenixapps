@@ -3,6 +3,7 @@ const fs = require("fs").promises;
 const path = require("path");
 const { sendSubmissionNotification } = require(path.join(__dirname, "..", "utils", "emailService"));
 const { getDataFilePath } = require(path.join(__dirname, "..", "utils", "dataPath"));
+const { useFirestore, getCollectionRef, getDoc, setDoc } = require(path.join(__dirname, "..", "utils", "db"));
 
 const router = express.Router();
 
@@ -17,6 +18,17 @@ function getSubmissionsFilePath() {
 
 // Get forms
 async function getForms() {
+  if (useFirestore) {
+    try {
+      const snap = await getCollectionRef('forms').get()
+      const items = []
+      snap.forEach(d => items.push({ id: d.id, ...d.data() }))
+      return items
+    } catch (e) {
+      console.error('Error fetching forms from Firestore:', e)
+      return []
+    }
+  }
   const FORMS_FILE = getFormsFilePath();
   try {
     const data = await fs.readFile(FORMS_FILE, "utf8");
@@ -30,6 +42,17 @@ async function getForms() {
 
 // Get submissions
 async function getSubmissions() {
+  if (useFirestore) {
+    try {
+      const snap = await getCollectionRef('submissions').get()
+      const items = []
+      snap.forEach(d => items.push({ id: d.id, ...d.data() }))
+      return items
+    } catch (e) {
+      console.error('Error fetching submissions from Firestore:', e)
+      return []
+    }
+  }
   const SUBMISSIONS_FILE = getSubmissionsFilePath();
   try {
     const data = await fs.readFile(SUBMISSIONS_FILE, "utf8");
@@ -37,7 +60,6 @@ async function getSubmissions() {
     return Array.isArray(submissions) ? submissions : [];
   } catch (error) {
     console.error("Error reading submissions file:", error);
-    // Return empty array if file doesn't exist (handles /tmp being cleared)
     if (error.code === 'ENOENT') {
       return [];
     }
@@ -47,6 +69,18 @@ async function getSubmissions() {
 
 // Save submissions
 async function saveSubmissions(submissions) {
+  if (useFirestore) {
+    try {
+      for (const s of submissions) {
+        const id = s.id || String(Date.now())
+        await setDoc('submissions', id, s)
+      }
+      return
+    } catch (e) {
+      console.error('Error saving submissions to Firestore:', e)
+      throw e
+    }
+  }
   const SUBMISSIONS_FILE = getSubmissionsFilePath();
   const dir = path.dirname(SUBMISSIONS_FILE);
   await fs.mkdir(dir, { recursive: true });
@@ -55,6 +89,19 @@ async function saveSubmissions(submissions) {
 
 // Save forms
 async function saveForms(forms) {
+  if (useFirestore) {
+    try {
+      for (const f of forms) {
+        const id = f.id
+        if (!id) continue
+        await setDoc('forms', id, f)
+      }
+      return
+    } catch (e) {
+      console.error('Error saving forms to Firestore:', e)
+      throw e
+    }
+  }
   const FORMS_FILE = getFormsFilePath();
   const dir = path.dirname(FORMS_FILE);
   await fs.mkdir(dir, { recursive: true });
@@ -64,19 +111,36 @@ async function saveForms(forms) {
 // Get public form by share key
 router.get("/form/:shareKey", async (req, res) => {
   try {
-    const forms = await getForms();
-    const form = forms.find((f) => f.shareKey === req.params.shareKey);
+    let form
+    if (useFirestore) {
+      const snap = await getCollectionRef('forms').where('shareKey', '==', req.params.shareKey).limit(1).get()
+      snap.forEach(d => { form = { id: d.id, ...d.data() } })
+    } else {
+      const forms = await getForms();
+      form = forms.find((f) => f.shareKey === req.params.shareKey);
+    }
 
     if (!form) {
       return res.status(404).json({ error: "Form not found" });
     }
 
     // Increment view count
-    const formIndex = forms.findIndex((f) => f.shareKey === req.params.shareKey);
-    if (formIndex !== -1) {
-      forms[formIndex].views = (forms[formIndex].views || 0) + 1;
-      forms[formIndex].lastViewedAt = new Date().toISOString();
-      await saveForms(forms);
+    if (useFirestore) {
+      try {
+        const current = await getDoc('forms', form.id)
+        const updated = { ...(current || {}), views: (current?.views || 0) + 1, lastViewedAt: new Date().toISOString() }
+        await setDoc('forms', form.id, updated)
+      } catch (e) {
+        console.error('Failed updating form view count in Firestore:', e)
+      }
+    } else {
+      const forms = await getForms();
+      const formIndex = forms.findIndex((f) => f.shareKey === req.params.shareKey);
+      if (formIndex !== -1) {
+        forms[formIndex].views = (forms[formIndex].views || 0) + 1;
+        forms[formIndex].lastViewedAt = new Date().toISOString();
+        await saveForms(forms);
+      }
     }
 
     // Return form without sensitive data
@@ -98,8 +162,15 @@ router.get("/form/:shareKey", async (req, res) => {
 // Submit form
 router.post("/form/:shareKey/submit", async (req, res) => {
   try {
-    const forms = await getForms();
-    const form = forms.find((f) => f.shareKey === req.params.shareKey);
+    // Resolve the form by shareKey (mirror GET /form/:shareKey behavior)
+    let form
+    if (useFirestore) {
+      const snap = await getCollectionRef('forms').where('shareKey', '==', req.params.shareKey).limit(1).get()
+      snap.forEach(d => { form = { id: d.id, ...d.data() } })
+    } else {
+      const forms = await getForms();
+      form = forms.find((f) => f.shareKey === req.params.shareKey);
+    }
 
     if (!form) {
       return res.status(404).json({ error: "Form not found" });
@@ -107,7 +178,6 @@ router.post("/form/:shareKey/submit", async (req, res) => {
 
     const { data: submissionData } = req.body;
 
-    const submissions = await getSubmissions();
     const newSubmission = {
       id: Date.now().toString(),
       formId: form.id,
@@ -115,9 +185,18 @@ router.post("/form/:shareKey/submit", async (req, res) => {
       submittedAt: new Date().toISOString(),
       ipAddress: req.ip,
     };
-
-    submissions.push(newSubmission);
-    await saveSubmissions(submissions);
+    if (useFirestore) {
+      try {
+        await setDoc('submissions', newSubmission.id, newSubmission)
+      } catch (e) {
+        console.error('Failed saving submission to Firestore:', e)
+        return res.status(500).json({ error: 'Failed to submit form' })
+      }
+    } else {
+      const submissions = await getSubmissions();
+      submissions.push(newSubmission);
+      await saveSubmissions(submissions);
+    }
 
     // Send email notifications if enabled
     if (form.settings?.emailNotifications?.enabled) {

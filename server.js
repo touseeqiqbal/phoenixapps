@@ -1,3 +1,13 @@
+// Load local `.env` in development (use platform env vars in production)
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    require('dotenv').config()
+  } catch (e) {
+    // dotenv may not be installed in some environments; continue gracefully
+    console.warn('dotenv not loaded:', e && e.message ? e.message : e)
+  }
+}
+
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");

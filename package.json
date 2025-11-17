@@ -24,15 +24,16 @@
   },
   "homepage": "https://github.com/touseeqiqbal/phoenixapp#readme",
   "dependencies": {
+    "axios": "^1.6.2",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
     "express": "^5.1.0",
     "firebase-admin": "^13.6.0",
-    "jsonwebtoken": "^9.0.2",
-    "nodemailer": "^6.10.1",
     "intuit-oauth": "^1.0.0",
+    "jsonwebtoken": "^9.0.2",
     "node-quickbooks": "^2.0.0",
-    "axios": "^1.6.2"
+    "nodemailer": "^6.10.1"
   }
 }

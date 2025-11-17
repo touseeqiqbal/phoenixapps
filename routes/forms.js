@@ -3,8 +3,7 @@ const fs = require("fs").promises;
 const path = require("path");
 const crypto = require("crypto");
 const { getDataFilePath } = require(path.join(__dirname, "..", "utils", "dataPath"));
-const { db } = require("../utils/db");
-const useFirestore = !!(process.env.FIREBASE_SERVICE_ACCOUNT) && !!db;
+const { db, useFirestore, getCollectionRef, setDoc, deleteDoc, getDoc } = require("../utils/db");
 
 const router = express.Router();
 
@@ -97,6 +96,17 @@ async function saveForms(forms) {
     });
     throw error;
   }
+}
+
+// Helper to load a single form by id from the active storage (Firestore or local file)
+async function getFormById(id) {
+  if (useFirestore) {
+    const doc = await db.collection('forms').doc(id).get();
+    if (!doc || !doc.exists) return null;
+    return { id: doc.id, ...doc.data() };
+  }
+  const forms = await getForms();
+  return forms.find((f) => f.id === id) || null;
 }
 
 // Get user's forms
@@ -251,6 +261,28 @@ router.post("/", async (req, res) => {
 // Update form
 router.put("/:id", async (req, res) => {
   try {
+    if (useFirestore) {
+      const docRef = db.collection('forms').doc(req.params.id);
+      const doc = await docRef.get();
+      if (!doc || !doc.exists) return res.status(404).json({ error: "Form not found" });
+      const existing = { id: doc.id, ...doc.data() };
+      const userId = req.user.uid || req.user.id;
+      if (existing.userId !== userId) return res.status(403).json({ error: "Access denied" });
+
+      const updatedForm = {
+        ...existing,
+        ...req.body,
+        id: existing.id,
+        userId: existing.userId,
+        shareKey: existing.shareKey,
+        createdAt: existing.createdAt,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await docRef.set(updatedForm);
+      return res.json(updatedForm);
+    }
+
     const forms = await getForms();
     const formIndex = forms.findIndex((f) => f.id === req.params.id);
 
@@ -286,6 +318,18 @@ router.put("/:id", async (req, res) => {
 // Delete form
 router.delete("/:id", async (req, res) => {
   try {
+    if (useFirestore) {
+      const docRef = db.collection('forms').doc(req.params.id);
+      const doc = await docRef.get();
+      if (!doc || !doc.exists) return res.status(404).json({ error: "Form not found" });
+      const existing = { id: doc.id, ...doc.data() };
+      const userId = req.user.uid || req.user.id;
+      if (existing.userId !== userId) return res.status(403).json({ error: "Access denied" });
+
+      await docRef.delete();
+      return res.json({ message: "Form deleted successfully" });
+    }
+
     const forms = await getForms();
     const formIndex = forms.findIndex((f) => f.id === req.params.id);
 
@@ -343,6 +387,35 @@ async function initInvitesFile() {
 // Get form members
 router.get("/:id/members", async (req, res) => {
   try {
+    // If Firestore available, store members as documents in 'members' collection with field formId
+    if (useFirestore) {
+      const snap = await getCollectionRef('members').where('formId', '==', req.params.id).get()
+      const formMembers = []
+      snap.forEach(d => formMembers.push({ id: d.id, ...d.data() }))
+
+      // Add owner as first member
+      const form = await getFormById(req.params.id);
+      if (form) {
+        const userId = req.user?.uid || req.user?.id;
+        let owner = null
+        try {
+          const ownerDoc = await getDoc('users', form.userId).catch(() => null)
+          owner = ownerDoc
+        } catch (err) {
+          console.warn('Could not load user data from Firestore:', err.message)
+        }
+        const ownerMember = {
+          id: form.userId,
+          email: owner?.email || 'unknown',
+          name: owner?.name || 'Owner',
+          role: 'owner',
+          isOwner: true
+        }
+        return res.json([ownerMember, ...formMembers.filter(m => m.id !== form.userId)])
+      }
+      return res.json(formMembers)
+    }
+
     const MEMBERS_FILE = getMembersFilePath();
     await initMembersFile();
     const data = await fs.readFile(MEMBERS_FILE, "utf8");
@@ -350,8 +423,7 @@ router.get("/:id/members", async (req, res) => {
     const formMembers = allMembers[req.params.id] || [];
     
     // Add owner as first member
-    const forms = await getForms();
-    const form = forms.find(f => f.id === req.params.id);
+    const form = await getFormById(req.params.id);
     if (form) {
       const userId = req.user.uid || req.user.id;
       const isOwner = form.userId === userId;
@@ -389,6 +461,12 @@ router.get("/:id/members", async (req, res) => {
 // Get form invites
 router.get("/:id/invites", async (req, res) => {
   try {
+    if (useFirestore) {
+      const snap = await getCollectionRef('invites').where('formId', '==', req.params.id).get()
+      const items = []
+      snap.forEach(d => items.push({ id: d.id, ...d.data() }))
+      return res.json(items)
+    }
     const INVITES_FILE = getInvitesFilePath();
     await initInvitesFile();
     const data = await fs.readFile(INVITES_FILE, "utf8");
@@ -403,8 +481,7 @@ router.get("/:id/invites", async (req, res) => {
 // Send invite
 router.post("/:id/invites", async (req, res) => {
   try {
-    const forms = await getForms();
-    const form = forms.find(f => f.id === req.params.id);
+    const form = await getFormById(req.params.id);
     if (!form) {
       return res.status(404).json({ error: "Form not found" });
     }
@@ -412,6 +489,18 @@ router.post("/:id/invites", async (req, res) => {
     const userId = req.user.uid || req.user.id;
     if (form.userId !== userId) {
       return res.status(403).json({ error: "Only form owner can invite members" });
+    }
+
+    if (useFirestore) {
+      const invite = {
+        id: crypto.randomBytes(8).toString("hex"),
+        email: req.body.email,
+        role: req.body.role || 'editor',
+        formId: req.params.id,
+        createdAt: new Date().toISOString()
+      };
+      await setDoc('invites', invite.id, invite)
+      return res.json(invite)
     }
 
     const INVITES_FILE = getInvitesFilePath();
@@ -446,6 +535,16 @@ router.post("/:id/invites", async (req, res) => {
 // Cancel invite
 router.delete("/:id/invites/:inviteId", async (req, res) => {
   try {
+    if (useFirestore) {
+      try {
+        await deleteDoc('invites', req.params.inviteId)
+        return res.json({ success: true })
+      } catch (e) {
+        console.error('Failed to delete invite in Firestore:', e)
+        return res.status(500).json({ error: 'Failed to cancel invite' })
+      }
+    }
+
     const INVITES_FILE = getInvitesFilePath();
     await initInvitesFile();
     const data = await fs.readFile(INVITES_FILE, "utf8");
@@ -470,8 +569,7 @@ router.delete("/:id/invites/:inviteId", async (req, res) => {
 // Update member role
 router.put("/:id/members/:memberId", async (req, res) => {
   try {
-    const forms = await getForms();
-    const form = forms.find(f => f.id === req.params.id);
+    const form = await getFormById(req.params.id);
     if (!form) {
       return res.status(404).json({ error: "Form not found" });
     }
@@ -479,6 +577,19 @@ router.put("/:id/members/:memberId", async (req, res) => {
     const userId = req.user.uid || req.user.id;
     if (form.userId !== userId) {
       return res.status(403).json({ error: "Only form owner can update roles" });
+    }
+
+    if (useFirestore) {
+      try {
+        const member = await getDoc('members', req.params.memberId)
+        if (!member) return res.status(404).json({ error: 'Member not found' })
+        const updated = { ...member, role: req.body.role }
+        await setDoc('members', req.params.memberId, updated)
+        return res.json({ success: true })
+      } catch (e) {
+        console.error('Update member role failed in Firestore:', e)
+        return res.status(500).json({ error: 'Failed to update member' })
+      }
     }
 
     const MEMBERS_FILE = getMembersFilePath();
@@ -508,8 +619,7 @@ router.put("/:id/members/:memberId", async (req, res) => {
 // Remove member
 router.delete("/:id/members/:memberId", async (req, res) => {
   try {
-    const forms = await getForms();
-    const form = forms.find(f => f.id === req.params.id);
+    const form = await getFormById(req.params.id);
     if (!form) {
       return res.status(404).json({ error: "Form not found" });
     }
@@ -517,6 +627,16 @@ router.delete("/:id/members/:memberId", async (req, res) => {
     const userId = req.user.uid || req.user.id;
     if (form.userId !== userId) {
       return res.status(403).json({ error: "Only form owner can remove members" });
+    }
+
+    if (useFirestore) {
+      try {
+        await deleteDoc('members', req.params.memberId)
+        return res.json({ success: true })
+      } catch (e) {
+        console.error('Failed to remove member in Firestore:', e)
+        return res.status(500).json({ error: 'Failed to remove member' })
+      }
     }
 
     const MEMBERS_FILE = getMembersFilePath();

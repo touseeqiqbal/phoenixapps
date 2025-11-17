@@ -1,8 +1,8 @@
 const express = require("express");
-const admin = require("firebase-admin");
 const fs = require("fs").promises;
 const path = require("path");
 const { getDataFilePath } = require(path.join(__dirname, "..", "utils", "dataPath"));
+const { admin, useFirestore, getCollectionRef, getDoc, setDoc } = require(path.join(__dirname, "..", "utils", "db"));
 const OAuthClient = require("intuit-oauth").OAuthClient;
 const QuickBooks = require("node-quickbooks");
 
@@ -25,8 +25,7 @@ async function getUserIdFromToken(req) {
 
   try {
     let userId;
-    const firebaseInitialized = !!process.env.FIREBASE_PROJECT_ID;
-    
+    const firebaseInitialized = !!useFirestore;
     if (firebaseInitialized) {
       const decodedToken = await admin.auth().verifyIdToken(token);
       userId = decodedToken.uid;
@@ -51,6 +50,17 @@ function getUsersFilePath() {
 
 // Get all users
 async function getUsers() {
+  if (useFirestore) {
+    try {
+      const snap = await getCollectionRef('users').get()
+      const items = []
+      snap.forEach(d => items.push({ id: d.id, ...d.data() }))
+      return items
+    } catch (e) {
+      console.error('Error fetching users from Firestore:', e)
+      return []
+    }
+  }
   const USERS_FILE = getUsersFilePath();
   try {
     const data = await fs.readFile(USERS_FILE, "utf8");
@@ -63,6 +73,19 @@ async function getUsers() {
 
 // Save users
 async function saveUsers(users) {
+  if (useFirestore) {
+    try {
+      for (const u of users) {
+        const uid = u.uid || u.id
+        if (!uid) continue
+        await setDoc('users', uid, u)
+      }
+      return
+    } catch (e) {
+      console.error('Error saving users to Firestore:', e)
+      throw e
+    }
+  }
   const USERS_FILE = getUsersFilePath();
   const dir = path.dirname(USERS_FILE);
   await fs.mkdir(dir, { recursive: true });
@@ -233,21 +256,34 @@ router.post("/sync", async (req, res) => {
     }
 
     // Get form and submissions
-    const { getDataFilePath } = require(path.join(__dirname, "..", "utils", "dataPath"));
-    const formsPath = getDataFilePath("forms.json");
-    const submissionsPath = getDataFilePath("submissions.json");
+    let form
+    let submissions = []
+    if (useFirestore) {
+      form = await getDoc('forms', formId)
+      if (!form || form.userId !== userId) {
+        return res.status(404).json({ error: "Form not found" });
+      }
+      const snap = await getCollectionRef('submissions').where('formId', '==', formId).get()
+      const all = []
+      snap.forEach(d => all.push({ id: d.id, ...d.data() }))
+      submissions = all.filter(s => !submissionIds || submissionIds.includes(s.id))
+    } else {
+      const { getDataFilePath } = require(path.join(__dirname, "..", "utils", "dataPath"));
+      const formsPath = getDataFilePath("forms.json");
+      const submissionsPath = getDataFilePath("submissions.json");
 
-    const formsData = JSON.parse(await fs.readFile(formsPath, "utf8"));
-    const submissionsData = JSON.parse(await fs.readFile(submissionsPath, "utf8"));
+      const formsData = JSON.parse(await fs.readFile(formsPath, "utf8"));
+      const submissionsData = JSON.parse(await fs.readFile(submissionsPath, "utf8"));
 
-    const form = formsData.find((f) => f.id === formId && f.userId === userId);
-    if (!form) {
-      return res.status(404).json({ error: "Form not found" });
+      form = formsData.find((f) => f.id === formId && f.userId === userId);
+      if (!form) {
+        return res.status(404).json({ error: "Form not found" });
+      }
+
+      submissions = submissionsData.filter(
+        (s) => s.formId === formId && (!submissionIds || submissionIds.includes(s.id))
+      );
     }
-
-    const submissions = submissionsData.filter(
-      (s) => s.formId === formId && (!submissionIds || submissionIds.includes(s.id))
-    );
 
     // Initialize QuickBooks client
     const qb = new QuickBooks(
