@@ -1,4 +1,4 @@
-# Deployment Guide - Phoenix Form Builder
+# Deployment Guide - BOOTMARK Form Builder
 
 ## Quick Deploy to Vercel
 

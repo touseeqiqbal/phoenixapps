@@ -1,3 +1,13 @@
+// Load local `.env` in development (use platform env vars in production)
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    require('dotenv').config()
+  } catch (e) {
+    // dotenv may not be installed in some environments; continue gracefully
+    console.warn('dotenv not loaded:', e && e.message ? e.message : e)
+  }
+}
+
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
@@ -9,6 +19,7 @@ const publicRouter = require("./routes/public");
 const authRouter = require("./routes/auth");
 const packagesRouter = require("./routes/packages");
 const submissionsRouter = require("./routes/submissions");
+const quickbooksRouter = require("./routes/quickbooks");
 const { authRequired } = require("./middleware/auth");
 
 const app = express();
@@ -48,6 +59,7 @@ app.use("/api/packages", packagesRouter);
 app.use("/api/forms", authRequired, formsRouter);
 app.use("/api/workspaces", authRequired, workspacesRouter);
 app.use("/api/submissions", authRequired, submissionsRouter);
+app.use("/api/quickbooks", quickbooksRouter);
 app.use("/api/public", publicRouter);
 
 // Serve static files from public/dist in production, or public in development

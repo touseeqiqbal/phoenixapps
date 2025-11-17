@@ -197,7 +197,6 @@ export default function PublicForm() {
   }
 
   // Apply styles to form container
-<<<<<<< HEAD
   const alignment = form.settings?.formAlignment || 'center'
   const containerStyle = {
     maxWidth: form.settings?.formWidth === '100%'
@@ -208,15 +207,6 @@ export default function PublicForm() {
     margin: alignment === 'center' ? '0 auto'
       : alignment === 'left' ? '0 auto 0 0'
       : '0 0 0 auto'
-=======
-  const containerStyle = {
-    maxWidth: form.settings?.formWidth === '100%' 
-      ? (form.settings?.maxWidth || '800px')
-      : (form.settings?.formWidth || '800px'),
-    width: form.settings?.formWidth === '100%' ? '100%' : 'auto',
-    margin: form.settings?.formAlignment === 'center' ? '0 auto' : 
-            form.settings?.formAlignment === 'left' ? '0 auto 0 0' : '0 0 0 auto'
->>>>>>> origin/main
   }
 
   // Apply styles to form card

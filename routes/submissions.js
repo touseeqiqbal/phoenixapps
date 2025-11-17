@@ -2,6 +2,7 @@ const express = require("express");
 const fs = require("fs").promises;
 const path = require("path");
 const { getDataFilePath } = require(path.join(__dirname, "..", "utils", "dataPath"));
+const { useFirestore, queryByFieldIn, getCollectionRef, getDoc, setDoc, deleteDoc } = require(path.join(__dirname, "..", "utils", "db"));
 
 const router = express.Router();
 
@@ -34,6 +35,17 @@ async function initSubmissionsFile() {
 
 // Get submissions
 async function getSubmissions() {
+  if (useFirestore) {
+    try {
+      const snap = await getCollectionRef('submissions').get()
+      const items = []
+      snap.forEach(d => items.push({ id: d.id, ...d.data() }))
+      return items
+    } catch (e) {
+      console.error('Error fetching submissions from Firestore:', e)
+      return []
+    }
+  }
   const SUBMISSIONS_FILE = getSubmissionsFilePath();
   try {
     await initSubmissionsFile();
@@ -41,7 +53,6 @@ async function getSubmissions() {
     return JSON.parse(data);
   } catch (error) {
     console.error("Error reading submissions file:", error);
-    // Return empty array if file doesn't exist (handles /tmp being cleared)
     if (error.code === 'ENOENT') {
       return [];
     }
@@ -51,6 +62,17 @@ async function getSubmissions() {
 
 // Get forms
 async function getForms() {
+  if (useFirestore) {
+    try {
+      const snap = await getCollectionRef('forms').get()
+      const items = []
+      snap.forEach(d => items.push({ id: d.id, ...d.data() }))
+      return items
+    } catch (e) {
+      console.error('Error fetching forms from Firestore:', e)
+      return []
+    }
+  }
   const FORMS_FILE = getFormsFilePath();
   try {
     const data = await fs.readFile(FORMS_FILE, "utf8");
@@ -146,6 +168,16 @@ router.delete("/:id", async (req, res) => {
 
     if (!formIds.includes(submission.formId)) {
       return res.status(403).json({ error: "Access denied" });
+    }
+
+    if (useFirestore) {
+      try {
+        await deleteDoc('submissions', req.params.id)
+        return res.json({ message: 'Submission deleted successfully' })
+      } catch (e) {
+        console.error('Failed to delete submission in Firestore:', e)
+        return res.status(500).json({ error: 'Failed to delete submission' })
+      }
     }
 
     const SUBMISSIONS_FILE = getSubmissionsFilePath();

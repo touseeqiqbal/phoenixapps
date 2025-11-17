@@ -36,7 +36,8 @@ function getDataDir() {
   const checkLocalDataDir = path.join(__dirname, "../data");
   const isLocalPathInLambda = checkLocalDataDir.startsWith('/var/task');
   
-  // If we're in /var/task, we're definitely in a serverless environment
+  // Render has persistent disk, so we can use the data directory
+  // Only use /tmp for Vercel/Lambda serverless environments
   const isVercel = hasVercelEnv || hasLambdaEnv || isInLambdaPath || isLocalPathInLambda;
 
   if (isVercel) {

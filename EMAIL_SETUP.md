@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 # Email Configuration Guide - BOOTMARK Form Builder
-=======
-# Email Configuration Guide - Phoenix Form Builder
->>>>>>> origin/main
 
 This guide will help you set up email notifications for form submissions.
 
@@ -30,7 +26,7 @@ SMTP_FROM=your-email@gmail.com
 2. **Generate App Password**:
    - Go to: https://myaccount.google.com/apppasswords
    - Select "Mail" and "Other (Custom name)"
-   - Enter "Phoenix Form Builder"
+    - Enter "BOOTMARK Form Builder"
    - Copy the 16-character password
 3. **Use in `.env`**:
    ```env
@@ -177,11 +173,7 @@ SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=myformbuilder@gmail.com
 SMTP_PASSWORD=abcd efgh ijkl mnop
-<<<<<<< HEAD
-   SMTP_FROM=notifications@bootmark.com
-=======
-SMTP_FROM=myformbuilder@gmail.com
->>>>>>> origin/main
+SMTP_FROM=notifications@bootmark.com
 
 # Firebase (if not already set)
 VITE_FIREBASE_API_KEY=your-key

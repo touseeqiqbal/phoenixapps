@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../utils/AuthContext'
 import api from '../utils/api'
-import { ArrowLeft, User, Lock, Bell, Building, Save } from 'lucide-react'
+import { ArrowLeft, User, Lock, Bell, Building, Save, Mail, CreditCard, CheckCircle, XCircle, Loader } from 'lucide-react'
 import '../styles/AccountSettings.css'
 
 export default function AccountSettings() {
@@ -54,8 +54,47 @@ export default function AccountSettings() {
     taxId: ''
   })
 
+  // SMTP Configuration
+  const [smtpConfig, setSmtpConfig] = useState({
+    host: '',
+    port: 587,
+    secure: false,
+    user: '',
+    password: '',
+    from: ''
+  })
+  const [smtpLoading, setSmtpLoading] = useState(false)
+  const [smtpTesting, setSmtpTesting] = useState(false)
+
+  // QuickBooks Integration
+  const [quickbooksStatus, setQuickbooksStatus] = useState({
+    connected: false,
+    realmId: null,
+    companyName: null,
+    lastSync: null
+  })
+  const [quickbooksLoading, setQuickbooksLoading] = useState(false)
+
   useEffect(() => {
     fetchAccountData()
+    fetchSmtpConfig()
+    fetchQuickbooksStatus()
+    
+    // Check for QuickBooks callback
+    const urlParams = new URLSearchParams(window.location.search)
+    const qbStatus = urlParams.get('quickbooks')
+    if (qbStatus === 'success') {
+      setMessage({ type: 'success', text: 'QuickBooks connected successfully!' })
+      setTimeout(() => {
+        window.history.replaceState({}, '', '/account-settings')
+        fetchQuickbooksStatus()
+      }, 2000)
+    } else if (qbStatus === 'error') {
+      setMessage({ type: 'error', text: 'Failed to connect QuickBooks. Please try again.' })
+      setTimeout(() => {
+        window.history.replaceState({}, '', '/account-settings')
+      }, 3000)
+    }
   }, [])
 
   const fetchAccountData = async () => {
@@ -86,6 +125,39 @@ export default function AccountSettings() {
       }))
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchSmtpConfig = async () => {
+    try {
+      const response = await api.get('/auth/account/smtp')
+      if (response.data) {
+        setSmtpConfig(prev => ({
+          ...prev,
+          host: response.data.host || '',
+          port: response.data.port || 587,
+          secure: response.data.secure || false,
+          user: response.data.user || '',
+          from: response.data.from || '',
+          password: response.data.passwordSet ? '••••••••' : '' // Don't show actual password
+        }))
+      }
+    } catch (error) {
+      console.error('Failed to fetch SMTP config:', error)
+    }
+  }
+
+  const fetchQuickbooksStatus = async () => {
+    try {
+      setQuickbooksLoading(true)
+      const response = await api.get('/quickbooks/status')
+      if (response.data) {
+        setQuickbooksStatus(response.data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch QuickBooks status:', error)
+    } finally {
+      setQuickbooksLoading(false)
     }
   }
 
@@ -196,6 +268,74 @@ export default function AccountSettings() {
       setMessage({ type: 'error', text: 'Failed to update business information' })
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleSmtpUpdate = async () => {
+    try {
+      setSmtpLoading(true)
+      setMessage({ type: '', text: '' })
+
+      await api.put('/auth/account/smtp', smtpConfig)
+      setMessage({ type: 'success', text: 'SMTP configuration updated successfully!' })
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+      fetchSmtpConfig()
+    } catch (error) {
+      console.error('Failed to update SMTP config:', error)
+      setMessage({ type: 'error', text: error.response?.data?.error || 'Failed to update SMTP configuration' })
+    } finally {
+      setSmtpLoading(false)
+    }
+  }
+
+  const handleSmtpTest = async () => {
+    try {
+      setSmtpTesting(true)
+      setMessage({ type: '', text: '' })
+
+      const response = await api.post('/auth/account/smtp/test')
+      if (response.data.success) {
+        setMessage({ type: 'success', text: response.data.message || 'Test email sent successfully!' })
+      } else {
+        setMessage({ type: 'error', text: response.data.error || 'Failed to send test email' })
+      }
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000)
+    } catch (error) {
+      console.error('Failed to test SMTP:', error)
+      setMessage({ type: 'error', text: error.response?.data?.error || 'Failed to send test email' })
+    } finally {
+      setSmtpTesting(false)
+    }
+  }
+
+  const handleQuickbooksConnect = async () => {
+    try {
+      setQuickbooksLoading(true)
+      const response = await api.get('/quickbooks/auth-url')
+      if (response.data.authUrl) {
+        window.location.href = response.data.authUrl
+      }
+    } catch (error) {
+      console.error('Failed to get QuickBooks auth URL:', error)
+      setMessage({ type: 'error', text: error.response?.data?.error || 'Failed to connect QuickBooks' })
+      setQuickbooksLoading(false)
+    }
+  }
+
+  const handleQuickbooksDisconnect = async () => {
+    if (!confirm('Are you sure you want to disconnect QuickBooks?')) return
+
+    try {
+      setQuickbooksLoading(true)
+      await api.post('/quickbooks/disconnect')
+      setMessage({ type: 'success', text: 'QuickBooks disconnected successfully!' })
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000)
+      fetchQuickbooksStatus()
+    } catch (error) {
+      console.error('Failed to disconnect QuickBooks:', error)
+      setMessage({ type: 'error', text: 'Failed to disconnect QuickBooks' })
+    } finally {
+      setQuickbooksLoading(false)
     }
   }
 
@@ -562,6 +702,149 @@ export default function AccountSettings() {
               <Save size={18} />
               {saving ? 'Saving...' : 'Save Information'}
             </button>
+          </div>
+        </section>
+
+        {/* SMTP Configuration */}
+        <section className="settings-section">
+          <div className="section-header">
+            <Mail size={24} />
+            <div>
+              <h2>SMTP Email Configuration</h2>
+              <p>Configure your email settings to send form submission notifications.</p>
+            </div>
+          </div>
+          <div className="section-content">
+            <div className="form-group">
+              <label>SMTP Host</label>
+              <input
+                type="text"
+                className="input"
+                value={smtpConfig.host}
+                onChange={(e) => setSmtpConfig(prev => ({ ...prev, host: e.target.value }))}
+                placeholder="smtp.gmail.com"
+              />
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>SMTP Port</label>
+                <input
+                  type="number"
+                  className="input"
+                  value={smtpConfig.port}
+                  onChange={(e) => setSmtpConfig(prev => ({ ...prev, port: parseInt(e.target.value) || 587 }))}
+                  placeholder="587"
+                />
+              </div>
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={smtpConfig.secure}
+                    onChange={(e) => setSmtpConfig(prev => ({ ...prev, secure: e.target.checked }))}
+                  />
+                  <span>Use SSL/TLS (Port 465)</span>
+                </label>
+              </div>
+            </div>
+            <div className="form-group">
+              <label>SMTP Username/Email</label>
+              <input
+                type="email"
+                className="input"
+                value={smtpConfig.user}
+                onChange={(e) => setSmtpConfig(prev => ({ ...prev, user: e.target.value }))}
+                placeholder="your-email@gmail.com"
+              />
+            </div>
+            <div className="form-group">
+              <label>SMTP Password</label>
+              <input
+                type="password"
+                className="input"
+                value={smtpConfig.password}
+                onChange={(e) => setSmtpConfig(prev => ({ ...prev, password: e.target.value }))}
+                placeholder={smtpConfig.password === '••••••••' ? 'Password is set (enter new password to change)' : 'Enter SMTP password'}
+              />
+              <small style={{ color: '#6b7280', marginTop: '4px', display: 'block' }}>
+                For Gmail, use an App Password. For other providers, use your regular password.
+              </small>
+            </div>
+            <div className="form-group">
+              <label>From Email Address</label>
+              <input
+                type="email"
+                className="input"
+                value={smtpConfig.from}
+                onChange={(e) => setSmtpConfig(prev => ({ ...prev, from: e.target.value }))}
+                placeholder="noreply@yourdomain.com"
+              />
+            </div>
+            <div className="form-group" style={{ display: 'flex', gap: '10px' }}>
+              <button className="btn btn-primary" onClick={handleSmtpUpdate} disabled={smtpLoading}>
+                <Save size={18} />
+                {smtpLoading ? 'Saving...' : 'Save SMTP Settings'}
+              </button>
+              <button className="btn btn-secondary" onClick={handleSmtpTest} disabled={smtpTesting || smtpLoading}>
+                {smtpTesting ? <Loader size={18} className="spinner" /> : <Mail size={18} />}
+                {smtpTesting ? 'Testing...' : 'Send Test Email'}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* QuickBooks Integration */}
+        <section className="settings-section">
+          <div className="section-header">
+            <CreditCard size={24} />
+            <div>
+              <h2>QuickBooks Integration</h2>
+              <p>Connect your QuickBooks account to sync form submissions as customers and invoices.</p>
+            </div>
+          </div>
+          <div className="section-content">
+            {quickbooksLoading ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Loader size={20} className="spinner" />
+                <span>Loading QuickBooks status...</span>
+              </div>
+            ) : quickbooksStatus.connected ? (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', padding: '15px', backgroundColor: '#f0fdf4', borderRadius: '8px', border: '1px solid #86efac' }}>
+                  <CheckCircle size={20} color="#22c55e" />
+                  <div>
+                    <strong style={{ color: '#22c55e' }}>QuickBooks Connected</strong>
+                    {quickbooksStatus.companyName && (
+                      <p style={{ margin: '4px 0 0 0', color: '#6b7280', fontSize: '14px' }}>
+                        Company: {quickbooksStatus.companyName}
+                      </p>
+                    )}
+                    {quickbooksStatus.lastSync && (
+                      <p style={{ margin: '4px 0 0 0', color: '#6b7280', fontSize: '12px' }}>
+                        Last sync: {new Date(quickbooksStatus.lastSync).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <button className="btn btn-secondary" onClick={handleQuickbooksDisconnect} disabled={quickbooksLoading}>
+                  <XCircle size={18} />
+                  Disconnect QuickBooks
+                </button>
+              </div>
+            ) : (
+              <div>
+                <p style={{ marginBottom: '20px', color: '#6b7280' }}>
+                  Connect your QuickBooks account to automatically sync form submissions. You'll be redirected to QuickBooks to authorize the connection.
+                </p>
+                <button className="btn btn-primary" onClick={handleQuickbooksConnect} disabled={quickbooksLoading}>
+                  {quickbooksLoading ? <Loader size={18} className="spinner" /> : <CreditCard size={18} />}
+                  {quickbooksLoading ? 'Connecting...' : 'Connect QuickBooks'}
+                </button>
+                <p style={{ marginTop: '10px', fontSize: '12px', color: '#9ca3af' }}>
+                  Note: You'll need to set up QuickBooks OAuth credentials in your environment variables first.
+                </p>
+              </div>
+            )}
           </div>
         </section>
       </div>

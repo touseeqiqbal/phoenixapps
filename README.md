@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 # BOOTMARK Form Builder
-=======
-# Phoenix Form Builder
->>>>>>> origin/main
 
 A comprehensive form builder application with drag-and-drop functionality. Built with React, Express, and multiple framework support.
 
@@ -170,3 +166,56 @@ ISC
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Firestore Setup (Optional)
+
+If you prefer to use Google Firestore for app data instead of the local JSON files under `data/`, the server supports Firestore via the Firebase Admin SDK. This section describes a simple local setup and notes to keep in mind.
+
+- **Env vars (one of these approaches):**
+	- `FIREBASE_SERVICE_ACCOUNT` — (optional) the full service account JSON as a string (not recommended for long-term storage).
+	- OR `GOOGLE_APPLICATION_CREDENTIALS` — local path to a service account JSON file (recommended for local development), e.g. `.firebase-service-account.json`.
+	- `FIREBASE_PROJECT_ID` — your Firebase project id.
+
+- **Local setup (recommended):**
+	1. Create a Firebase service account in the Firebase Console and download the JSON key.
+ 2. Save it to the project root as `.firebase-service-account.json` and add that filename to `.gitignore`.
+ 3. In your shell set the env vars:
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=.firebase-service-account.json
+export FIREBASE_PROJECT_ID=your-project-id
+```
+
+ 4. Start the server (server loads `.env` in development):
+
+```bash
+npm install
+npm start
+```
+
+- **Notes and caveats:**
+	- The app supports both Firestore and the original local JSON file fallback. If Firestore is not initialized, the server will continue using the `data/` directory.
+	- Some Firestore queries (for example if you use `orderBy` with equality filters) may require composite indexes. If you see an error mentioning an index, follow the provided console link to create the index in the Firebase Console.
+	- For production, use your platform's secret management (Vercel/Render/GCP Secret Manager) instead of committing keys to the repo.
+
+## Testing the public submit flow (dev)
+
+Two small test scripts were added to help verify the public submit flow locally:
+
+- `scripts/test_submit_form.js` — creates a test form (shareKey `7010bf91ee751390`) in the active storage (Firestore or `data/`) and POSTs a submission to the public submit endpoint.
+- `scripts/check_submissions.js` — queries the `submissions` collection (Firestore) for submissions for the test form and prints results. If Firestore is not enabled, check `data/submissions.json`.
+
+Run these after starting the server:
+
+```bash
+# start server (in project root)
+npm start
+
+# create test form and post a submission
+node scripts/test_submit_form.js
+
+# list submissions for the test form (Firestore)
+node scripts/check_submissions.js
+```
+
+If you'd like, I can remove or move these test scripts into a `dev-scripts/` folder before you merge.
