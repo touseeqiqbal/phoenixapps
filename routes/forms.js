@@ -53,9 +53,12 @@ async function getForms() {
   try {
     await initFormsFile();
     const data = await fs.readFile(FORMS_FILE, "utf8");
-    return JSON.parse(data);
+    const forms = JSON.parse(data);
+    console.log(`Read ${forms.length} forms from ${FORMS_FILE}`);
+    return Array.isArray(forms) ? forms : [];
   } catch (error) {
     console.error("Error reading forms file:", error);
+    console.error("Forms file path:", FORMS_FILE);
     // If file doesn't exist or can't be read, return empty array
     // This handles the case where /tmp was cleared (serverless functions)
     if (error.code === 'ENOENT') {
@@ -114,17 +117,22 @@ router.get("/", async (req, res) => {
   try {
     const userId = req.user?.uid || req.user?.id
     if (!userId) return res.status(401).json({ error: 'Not authenticated' })
+    console.log(`Fetching forms for user: ${userId}`)
     if (useFirestore) {
       const snap = await db.collection('forms').where('userId', '==', userId).get()
       const items = []
       snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }))
+      console.log(`Found ${items.length} forms in Firestore for user ${userId}`)
       return res.json(items)
     }
     const forms = await getForms()
+    console.log(`Total forms in storage: ${forms.length}`)
     const userForms = forms.filter((f) => f.userId === userId)
+    console.log(`Found ${userForms.length} forms for user ${userId}`)
     res.json(userForms)
   } catch (error) {
     console.error("Get forms error:", error)
+    console.error("Error stack:", error.stack)
     res.status(500).json({ error: "Failed to fetch forms" })
   }
 });
@@ -230,6 +238,19 @@ router.post("/", async (req, res) => {
     console.log("Attempting to save forms, new count:", forms.length);
     
     await saveForms(forms);
+
+    // Verify the form was saved by reading it back
+    try {
+      const verifyForms = await getForms();
+      const savedForm = verifyForms.find(f => f.id === newForm.id);
+      if (savedForm) {
+        console.log("Form verified in storage:", newForm.id);
+      } else {
+        console.warn("WARNING: Form was saved but not found when reading back:", newForm.id);
+      }
+    } catch (verifyError) {
+      console.error("Error verifying saved form:", verifyError);
+    }
 
     console.log("Form created successfully:", newForm.id);
     res.status(201).json(newForm);
