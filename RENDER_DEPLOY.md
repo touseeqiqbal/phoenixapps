@@ -31,12 +31,15 @@ npm start
 
 ### Step 3: Set Environment Variables
 
-In Render Dashboard → Environment → Environment Variables, add:
+**⚠️ CRITICAL**: These environment variables MUST be set in Render Dashboard before deployment, especially the Firebase variables. Without them, Firebase will not work and the app will fall back to localStorage-only mode.
+
+In Render Dashboard → Your Service → Environment → Environment Variables, add:
 
 #### Required Variables:
 
 ```env
-# Firebase Configuration
+# Firebase Configuration (REQUIRED - app won't work without these!)
+# Get these from Firebase Console → Project Settings → Your apps → Web app config
 VITE_FIREBASE_API_KEY=your-firebase-api-key
 VITE_FIREBASE_AUTH_DOMAIN=your-firebase-auth-domain
 VITE_FIREBASE_PROJECT_ID=your-firebase-project-id
@@ -51,6 +54,8 @@ JWT_SECRET=your-secret-key-change-this-to-something-secure
 # Node Environment
 NODE_ENV=production
 ```
+
+**Note**: Variables starting with `VITE_` are embedded into the frontend build at build time. They must be set in Render's environment before the build runs.
 
 #### Optional Variables (for email functionality):
 
@@ -180,6 +185,42 @@ Render automatically deploys when you push to your connected branch (usually `ma
 - Verify static file serving in `server.js`
 - Check browser console for errors
 - Ensure all `VITE_*` environment variables are set
+
+### Firebase Not Working / Using LocalStorage Only
+
+**Symptom**: App works locally but on Render it only uses localStorage and Firebase authentication doesn't work.
+
+**Solution**:
+1. **Set all Firebase environment variables in Render Dashboard**:
+   - Go to Render Dashboard → Your Service → Environment
+   - Add ALL of these variables (they must start with `VITE_`):
+     - `VITE_FIREBASE_API_KEY`
+     - `VITE_FIREBASE_AUTH_DOMAIN`
+     - `VITE_FIREBASE_PROJECT_ID`
+     - `VITE_FIREBASE_STORAGE_BUCKET`
+     - `VITE_FIREBASE_MESSAGING_SENDER_ID`
+     - `VITE_FIREBASE_APP_ID`
+     - `VITE_FIREBASE_MEASUREMENT_ID`
+
+2. **Important**: These variables are needed at BUILD TIME (not just runtime)
+   - Vite replaces `import.meta.env.VITE_*` during the build process
+   - If variables are missing during build, Firebase config will be undefined
+   - The app will fall back to localStorage-only mode
+
+3. **Verify variables are set**:
+   - After setting variables, trigger a new deployment
+   - Check build logs to ensure build completes successfully
+   - Check browser console for "Firebase initialized successfully" message
+   - If you see "Firebase initialization failed", check the config values
+
+4. **Get Firebase config values**:
+   - Go to Firebase Console → Project Settings → Your apps
+   - Copy the config values from your web app configuration
+   - Make sure you're using the correct project's config
+
+5. **Add Render domain to Firebase**:
+   - Firebase Console → Authentication → Settings → Authorized domains
+   - Add: `your-app-name.onrender.com`
 
 ### Port Issues
 
