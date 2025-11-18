@@ -16,6 +16,7 @@ export default function PublicForm() {
   const [showPreview, setShowPreview] = useState(false)
   const [currentPage, setCurrentPage] = useState(0)
   const [pages, setPages] = useState([{ id: '1', name: 'Page 1', order: 0 }])
+  const [errors, setErrors] = useState({})
 
   useEffect(() => {
     fetchForm()
@@ -82,10 +83,86 @@ export default function PublicForm() {
 
   const handleFieldChange = (fieldId, value) => {
     setFormData(prev => ({ ...prev, [fieldId]: value }))
+    // Clear error for this field when user starts typing
+    if (errors[fieldId]) {
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[fieldId]
+        return newErrors
+      })
+    }
+  }
+
+  // Validate required fields
+  const validateForm = () => {
+    const newErrors = {}
+    const allFields = fields // Check all fields across all pages
+    
+    allFields.forEach(field => {
+      // Skip validation for non-input fields
+      if (['heading', 'divider', 'page-break', 'paragraph', 'logo', 'spinner'].includes(field.type)) {
+        return
+      }
+
+      if (field.required) {
+        const value = formData[field.id]
+        let isEmpty = false
+
+        // Check if field is empty based on type
+        if (value === undefined || value === null || value === '') {
+          isEmpty = true
+        } else if (Array.isArray(value)) {
+          // For checkbox/multiple choice, check if array is empty or only contains empty strings
+          isEmpty = value.length === 0 || value.every(v => !v || v === '')
+        } else if (typeof value === 'object') {
+          // For complex fields like full-name, address, appointment
+          if (field.type === 'full-name') {
+            isEmpty = !value.firstName && !value.lastName
+          } else if (field.type === 'address') {
+            isEmpty = !value.street && !value.city && !value.state && !value.zip
+          } else if (field.type === 'appointment') {
+            isEmpty = !value.date || !value.time
+          } else if (field.type === 'input-table') {
+            // Check if table has any values
+            isEmpty = Object.keys(value).length === 0 || Object.values(value).every(v => !v)
+          } else {
+            // Generic object check
+            isEmpty = Object.keys(value).length === 0 || Object.values(value).every(v => !v || v === '')
+          }
+        } else if (field.type === 'file' || field.type === 'image') {
+          // File inputs - check if files are selected
+          isEmpty = !value || (value instanceof FileList && value.length === 0)
+        } else if (field.type === 'signature') {
+          isEmpty = !value || value === ''
+        } else if (field.type === 'captcha') {
+          isEmpty = value !== true // Captcha returns boolean
+        }
+
+        if (isEmpty) {
+          newErrors[field.id] = `${field.label || 'This field'} is required`
+        }
+      }
+    })
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    // Validate required fields first
+    if (!validateForm()) {
+      // Scroll to first error
+      const firstErrorField = Object.keys(errors)[0]
+      if (firstErrorField) {
+        const errorElement = document.querySelector(`[data-field-id="${firstErrorField}"]`)
+        if (errorElement) {
+          errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }
+      return
+    }
     
     // Show preview if enabled
     if (form.settings?.showPreviewBeforeSubmit && !showPreview) {
@@ -102,6 +179,7 @@ export default function PublicForm() {
       setSubmitted(true)
       setFormData({})
       setShowPreview(false)
+      setErrors({})
     } catch (error) {
       console.error('Failed to submit form:', error)
       alert(error.response?.data?.error || 'Failed to submit form')
@@ -271,12 +349,26 @@ export default function PublicForm() {
           ) : (
             <form onSubmit={handleSubmit} className="public-form">
               {pageFields.map(field => (
-                <FieldRenderer
-                  key={field.id}
-                  field={field}
-                  value={formData[field.id]}
-                  onChange={(value) => handleFieldChange(field.id, value)}
-                />
+                <div key={field.id} data-field-id={field.id}>
+                  <FieldRenderer
+                    field={field}
+                    value={formData[field.id]}
+                    onChange={(value) => handleFieldChange(field.id, value)}
+                  />
+                  {errors[field.id] && (
+                    <div className="field-error" style={{ 
+                      color: '#ef4444', 
+                      fontSize: '14px', 
+                      marginTop: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <span>⚠</span>
+                      <span>{errors[field.id]}</span>
+                    </div>
+                  )}
+                </div>
               ))}
               
               <div className="form-actions">
@@ -298,7 +390,43 @@ export default function PublicForm() {
                   <button 
                     type="button"
                     className={getButtonClass('primary')}
-                    onClick={nextPage}
+                    onClick={() => {
+                      // Validate current page before moving to next
+                      const pageFields = getFieldsForPage(currentPage)
+                      const pageErrors = {}
+                      pageFields.forEach(field => {
+                        if (field.required && !formData[field.id]) {
+                          const value = formData[field.id]
+                          let isEmpty = value === undefined || value === null || value === ''
+                          if (Array.isArray(value)) {
+                            isEmpty = value.length === 0 || value.every(v => !v || v === '')
+                          } else if (typeof value === 'object' && value !== null) {
+                            if (field.type === 'full-name') {
+                              isEmpty = !value.firstName && !value.lastName
+                            } else if (field.type === 'address') {
+                              isEmpty = !value.street && !value.city && !value.state && !value.zip
+                            } else if (field.type === 'appointment') {
+                              isEmpty = !value.date || !value.time
+                            } else {
+                              isEmpty = Object.keys(value).length === 0
+                            }
+                          }
+                          if (isEmpty) {
+                            pageErrors[field.id] = `${field.label || 'This field'} is required`
+                          }
+                        }
+                      })
+                      if (Object.keys(pageErrors).length > 0) {
+                        setErrors(prev => ({ ...prev, ...pageErrors }))
+                        const firstError = Object.keys(pageErrors)[0]
+                        const errorElement = document.querySelector(`[data-field-id="${firstError}"]`)
+                        if (errorElement) {
+                          errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                        }
+                        return
+                      }
+                      nextPage()
+                    }}
                     style={{ 
                       backgroundColor: form.settings?.primaryColor || '#4f46e5',
                       borderRadius: form.settings?.borderRadius || '8px'

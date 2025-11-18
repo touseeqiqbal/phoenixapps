@@ -681,4 +681,150 @@ router.delete("/:id/members/:memberId", async (req, res) => {
   }
 });
 
+// Export form (download JSON)
+router.get("/:id/export", async (req, res) => {
+  try {
+    const userId = req.user?.uid || req.user?.id
+    if (!userId) return res.status(401).json({ error: 'Not authenticated' })
+    
+    let form
+    if (useFirestore) {
+      const doc = await db.collection('forms').doc(req.params.id).get()
+      if (!doc || !doc.exists) return res.status(404).json({ error: 'Form not found' })
+      form = { id: doc.id, ...doc.data() }
+    } else {
+      const forms = await getForms()
+      form = forms.find((f) => f.id === req.params.id)
+    }
+    
+    if (!form) {
+      return res.status(404).json({ error: "Form not found" })
+    }
+    
+    if (form.userId !== userId) {
+      return res.status(403).json({ error: "Access denied" })
+    }
+    
+    const exportData = {
+      ...form,
+      exportedAt: new Date().toISOString(),
+      version: '1.0'
+    }
+    
+    res.setHeader('Content-Type', 'application/json')
+    res.setHeader('Content-Disposition', `attachment; filename="${form.title || 'form'}_${Date.now()}.json"`)
+    res.json(exportData)
+  } catch (error) {
+    console.error("Export form error:", error)
+    res.status(500).json({ error: "Failed to export form" })
+  }
+})
+
+// Import form (upload JSON)
+router.post("/:id/import", async (req, res) => {
+  try {
+    const userId = req.user?.uid || req.user?.id
+    if (!userId) return res.status(401).json({ error: 'Not authenticated' })
+    
+    // Verify user owns the form
+    let existingForm
+    if (useFirestore) {
+      const doc = await db.collection('forms').doc(req.params.id).get()
+      if (!doc || !doc.exists) return res.status(404).json({ error: 'Form not found' })
+      existingForm = { id: doc.id, ...doc.data() }
+    } else {
+      const forms = await getForms()
+      existingForm = forms.find((f) => f.id === req.params.id)
+    }
+    
+    if (!existingForm) {
+      return res.status(404).json({ error: "Form not found" })
+    }
+    
+    if (existingForm.userId !== userId) {
+      return res.status(403).json({ error: "Access denied" })
+    }
+    
+    const { formData } = req.body
+    
+    if (!formData || !formData.fields || !Array.isArray(formData.fields)) {
+      return res.status(400).json({ error: "Invalid form data. Missing fields array." })
+    }
+    
+    // Update form with imported data
+    const updatedForm = {
+      ...existingForm,
+      fields: formData.fields,
+      pages: formData.pages || existingForm.pages,
+      settings: formData.settings || existingForm.settings,
+      title: formData.title || existingForm.title,
+      updatedAt: new Date().toISOString()
+    }
+    
+    if (useFirestore) {
+      await db.collection('forms').doc(req.params.id).set(updatedForm)
+    } else {
+      const forms = await getForms()
+      const formIndex = forms.findIndex((f) => f.id === req.params.id)
+      if (formIndex !== -1) {
+        forms[formIndex] = updatedForm
+        await saveForms(forms)
+      }
+    }
+    
+    res.json(updatedForm)
+  } catch (error) {
+    console.error("Import form error:", error)
+    res.status(500).json({ error: "Failed to import form" })
+  }
+})
+
+// Backup form to Google Drive (requires Google Drive API setup)
+router.post("/:id/backup-drive", async (req, res) => {
+  try {
+    const userId = req.user?.uid || req.user?.id
+    if (!userId) return res.status(401).json({ error: 'Not authenticated' })
+    
+    // Get form
+    let form
+    if (useFirestore) {
+      const doc = await db.collection('forms').doc(req.params.id).get()
+      if (!doc || !doc.exists) return res.status(404).json({ error: 'Form not found' })
+      form = { id: doc.id, ...doc.data() }
+    } else {
+      const forms = await getForms()
+      form = forms.find((f) => f.id === req.params.id)
+    }
+    
+    if (!form) {
+      return res.status(404).json({ error: "Form not found" })
+    }
+    
+    if (form.userId !== userId) {
+      return res.status(403).json({ error: "Access denied" })
+    }
+    
+    // Note: This endpoint requires Google Drive API setup
+    // For now, return the form data so frontend can handle the upload
+    // In production, you would implement server-side Google Drive API integration here
+    
+    const backupData = {
+      ...form,
+      exportedAt: new Date().toISOString(),
+      version: '1.0',
+      backupType: 'google_drive'
+    }
+    
+    res.json({
+      success: true,
+      message: 'Form data ready for backup',
+      data: backupData,
+      note: 'Google Drive backup requires client-side implementation or server-side OAuth setup'
+    })
+  } catch (error) {
+    console.error("Backup form error:", error)
+    res.status(500).json({ error: "Failed to backup form" })
+  }
+})
+
 module.exports = router;
