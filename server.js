@@ -36,21 +36,51 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get("/api/health", (_req, res) => {
+app.get("/api/health", async (_req, res) => {
   const { getDataDir, getDataFilePath } = require(path.join(__dirname, "utils", "dataPath"));
+  const fs = require("fs");
   const dataDir = getDataDir();
   const formsPath = getDataFilePath("forms.json");
+  
+  // Check if forms file exists and get its size
+  let formsFileExists = false;
+  let formsFileSize = 0;
+  let formsCount = 0;
+  try {
+    if (fs.existsSync(formsPath)) {
+      formsFileExists = true;
+      const stats = fs.statSync(formsPath);
+      formsFileSize = stats.size;
+      try {
+        const data = fs.readFileSync(formsPath, "utf8");
+        const forms = JSON.parse(data);
+        formsCount = Array.isArray(forms) ? forms.length : 0;
+      } catch (e) {
+        console.error("Error reading forms file in health check:", e);
+      }
+    }
+  } catch (e) {
+    console.error("Error checking forms file:", e);
+  }
+  
   res.json({ 
     status: "ok", 
     timestamp: new Date().toISOString(),
     environment: {
       VERCEL: process.env.VERCEL,
       VERCEL_ENV: process.env.VERCEL_ENV,
+      RENDER: process.env.RENDER,
+      RENDER_SERVICE_NAME: process.env.RENDER_SERVICE_NAME,
       AWS_LAMBDA_FUNCTION_NAME: process.env.AWS_LAMBDA_FUNCTION_NAME,
       __dirname: __dirname
     },
     dataDirectory: dataDir,
-    formsFilePath: formsPath
+    formsFilePath: formsPath,
+    formsFile: {
+      exists: formsFileExists,
+      size: formsFileSize,
+      formsCount: formsCount
+    }
   });
 });
 

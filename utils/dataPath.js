@@ -38,7 +38,12 @@ function getDataDir() {
   
   // Render has persistent disk, so we can use the data directory
   // Only use /tmp for Vercel/Lambda serverless environments
-  const isVercel = hasVercelEnv || hasLambdaEnv || isInLambdaPath || isLocalPathInLambda;
+  // Check if we're on Render (has RENDER environment or specific paths)
+  const isRender = process.env.RENDER === 'true' || 
+                   process.env.RENDER_SERVICE_NAME ||
+                   __dirname.includes('/opt/render');
+  
+  const isVercel = (hasVercelEnv || hasLambdaEnv || isInLambdaPath || isLocalPathInLambda) && !isRender;
 
   if (isVercel) {
     // Ensure /tmp/data exists
@@ -75,7 +80,8 @@ function getDataDir() {
       return dataDir;
     }
   }
-  // Local development - use project data directory
+  // Local development or Render - use project data directory
+  // On Render, this will be persistent: /opt/render/project/src/data
   const localDataDir = checkLocalDataDir;
   // Ensure local data directory exists
   try {
@@ -87,7 +93,12 @@ function getDataDir() {
     console.warn('Could not create local data directory:', error);
   }
   dataDir = localDataDir;
-  console.log('Using local data directory:', dataDir);
+  
+  if (isRender) {
+    console.log('Using Render persistent data directory:', dataDir);
+  } else {
+    console.log('Using local data directory:', dataDir);
+  }
   return dataDir;
 }
 

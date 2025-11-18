@@ -8,7 +8,7 @@ import FormSettings from '../components/FormSettings'
 import ConditionalLogic from '../components/ConditionalLogic'
 import FieldEditor from '../components/FieldEditor'
 import PageManager from '../components/PageManager'
-import { Save, Eye, ArrowLeft, Share2, Copy, Check, GitBranch, FileText } from 'lucide-react'
+import { Save, Eye, ArrowLeft, Share2, Copy, Check, GitBranch, FileText, Download, Upload, Cloud } from 'lucide-react'
 import '../styles/FormBuilder.css'
 
 export default function FormBuilder() {
@@ -144,6 +144,174 @@ export default function FormBuilder() {
       navigator.clipboard.writeText(link)
       setShareLinkCopied(true)
       setTimeout(() => setShareLinkCopied(false), 2000)
+    }
+  }
+
+  // Export form as JSON
+  const exportForm = async () => {
+    try {
+      // Try API endpoint first (more reliable, includes all server data)
+      try {
+        const response = await api.get(`/forms/${id}/export`)
+        const dataStr = JSON.stringify(response.data, null, 2)
+        const dataBlob = new Blob([dataStr], { type: 'application/json' })
+        const url = window.URL.createObjectURL(dataBlob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `${form.title || 'form'}_${Date.now()}.json`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+        alert('Form exported successfully!')
+        return
+      } catch (apiError) {
+        console.warn('API export failed, using client-side export:', apiError)
+      }
+      
+      // Fallback to client-side export
+      const formData = {
+        ...form,
+        fields,
+        pages,
+        exportedAt: new Date().toISOString(),
+        version: '1.0'
+      }
+      const dataStr = JSON.stringify(formData, null, 2)
+      const dataBlob = new Blob([dataStr], { type: 'application/json' })
+      const url = URL.createObjectURL(dataBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${form.title || 'form'}_${Date.now()}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      alert('Form exported successfully!')
+    } catch (error) {
+      console.error('Export error:', error)
+      alert('Failed to export form')
+    }
+  }
+
+  // Import form from JSON
+  const importForm = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json'
+    input.onchange = async (e) => {
+      const file = e.target.files[0]
+      if (!file) return
+
+      try {
+        const text = await file.text()
+        const importedData = JSON.parse(text)
+        
+        // Validate imported data
+        if (!importedData.fields || !Array.isArray(importedData.fields)) {
+          alert('Invalid form file. Missing fields array.')
+          return
+        }
+
+        // Confirm import
+        if (!confirm('This will replace your current form. Continue?')) {
+          return
+        }
+
+        // Use API endpoint for import (more reliable)
+        try {
+          await api.post(`/forms/${id}/import`, { formData: importedData })
+          // Refresh form data
+          await fetchForm()
+          alert('Form imported successfully!')
+        } catch (apiError) {
+          // Fallback to client-side import if API fails
+          console.warn('API import failed, using client-side import:', apiError)
+          setFields(importedData.fields || [])
+          if (importedData.pages && Array.isArray(importedData.pages)) {
+            setPages(importedData.pages)
+          }
+          if (importedData.settings) {
+            setForm(prev => ({ ...prev, settings: importedData.settings }))
+          }
+          if (importedData.title) {
+            setForm(prev => ({ ...prev, title: importedData.title }))
+          }
+          await saveForm()
+          alert('Form imported successfully!')
+        }
+      } catch (error) {
+        console.error('Import error:', error)
+        alert('Failed to import form. Invalid file format.')
+      }
+    }
+    input.click()
+  }
+
+  // Backup form to Google Drive
+  const backupToDrive = async () => {
+    try {
+      // Check if Google Drive API is available
+      if (typeof gapi === 'undefined' || !gapi.auth2) {
+        alert('Google Drive API not loaded. Please ensure Google Drive integration is configured.')
+        return
+      }
+
+      const formData = {
+        ...form,
+        fields,
+        pages,
+        exportedAt: new Date().toISOString(),
+        version: '1.0',
+        backupType: 'google_drive'
+      }
+      const dataStr = JSON.stringify(formData, null, 2)
+      const dataBlob = new Blob([dataStr], { type: 'application/json' })
+      
+      // Get access token
+      const authInstance = gapi.auth2.getAuthInstance()
+      const user = authInstance.currentUser.get()
+      const authResponse = user.getAuthResponse()
+      
+      if (!authResponse.access_token) {
+        // Request authorization
+        await authInstance.signIn({ scope: 'https://www.googleapis.com/auth/drive.file' })
+        const newAuthResponse = authInstance.currentUser.get().getAuthResponse()
+        if (!newAuthResponse.access_token) {
+          alert('Failed to get Google Drive access. Please try again.')
+          return
+        }
+      }
+
+      // Upload to Google Drive
+      const metadata = {
+        name: `${form.title || 'form'}_backup_${Date.now()}.json`,
+        mimeType: 'application/json',
+        parents: [] // Root folder, or specify folder ID
+      }
+
+      const formDataUpload = new FormData()
+      formDataUpload.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }))
+      formDataUpload.append('file', dataBlob)
+
+      const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authInstance.currentUser.get().getAuthResponse().access_token}`
+        },
+        body: formDataUpload
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        alert(`Form backed up to Google Drive successfully!\nFile ID: ${result.id}`)
+      } else {
+        const error = await response.json()
+        throw new Error(error.error?.message || 'Failed to upload to Google Drive')
+      }
+    } catch (error) {
+      console.error('Google Drive backup error:', error)
+      alert(`Failed to backup to Google Drive: ${error.message}\n\nNote: Google Drive integration requires additional setup. You can use Export instead.`)
     }
   }
 
@@ -317,6 +485,30 @@ export default function FormBuilder() {
                 {shareLinkCopied ? 'Copied!' : 'Share'}
               </button>
             )}
+            <button 
+              className="btn btn-secondary" 
+              onClick={exportForm}
+              title="Export form as JSON"
+            >
+              <Download size={18} />
+              Export
+            </button>
+            <button 
+              className="btn btn-secondary" 
+              onClick={importForm}
+              title="Import form from JSON"
+            >
+              <Upload size={18} />
+              Import
+            </button>
+            <button 
+              className="btn btn-secondary" 
+              onClick={backupToDrive}
+              title="Backup form to Google Drive"
+            >
+              <Cloud size={18} />
+              Backup
+            </button>
             <button 
               className="btn btn-secondary" 
               onClick={() => setShowPreview(!showPreview)}
